@@ -40,7 +40,7 @@ describe("outbound", () => {
   it("should fail if specifying no version", () => new Promise((resolve, reject) => {
 
     socket = io(url, { forceNew: true }).on("error", (error) => {
-      if ("Version not found in handshake request" === error) {
+      if ("Version not found in handshake request, expected query parameter 'v'" === error) {
         resolve();
       } else {
         reject(`Unexpected error: ${error}`);
@@ -67,7 +67,7 @@ describe("outbound", () => {
 
   it("should disconnect in no authentication is received", () => new Promise((resolve, reject) => {
 
-    socket = io("http://localhost:3000", { forceNew: true, query: "v=1" }).on("error", (error) => {
+    socket = io("http://localhost:3000", { forceNew: true, query: { v: 1 } }).on("error", (error) => {
       reject(`Unexpected error: ${error}`);
     }).on("connect", () => {
       socket.on("alert", (message) => {
@@ -85,7 +85,7 @@ describe("outbound", () => {
 
   it("should disconnect if authentication is invalid", () => new Promise((resolve, reject) => {
 
-    socket = io(url, { forceNew: true, query: "v=1" }).on("error", (error) => {
+    socket = io(url, { forceNew: true, query: { v: 1 } }).on("error", (error) => {
       reject(`Unexpected error: ${error}`);
     }).on("connect", () => {
       const token = "foobar";

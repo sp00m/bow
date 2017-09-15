@@ -52,7 +52,7 @@ describe("middleware", () => {
 
     return new Promise((resolve, reject) => {
 
-      socket = io(url, { forceNew: true, query: "v=1" })
+      socket = io(url, { forceNew: true, query: { v: 1 } })
 
         .on("error", (reason) => {
           reject(reason);
