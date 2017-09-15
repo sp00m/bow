@@ -1,0 +1,44 @@
+{
+  "name": "bow",
+  "version": "1.0.0",
+  "description": "Broadcast Over WebSocket",
+  "keywords": [],
+  "author": "sp00m <christophe.maillard@rocketmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bowjs/bow.git"
+  },
+  "homepage": "https://github.com/bowjs/bow#readme",
+  "bugs": {
+    "url": "https://github.com/bowjs/bow/issues"
+  },
+  "devDependencies": {
+    "babel-eslint": "^7.2.3",
+    "eslint": "^3.19.0",
+    "eslint-plugin-no-null": "^1.0.2",
+    "husky": "^0.13.3",
+    "istanbul": "^1.1.0-alpha.1",
+    "mocha": "^3.5.3",
+    "should": "^13.0.1",
+    "socket.io-client": "^2.0.3",
+    "supertest": "^3.0.0",
+    "supervisor": "^0.12.0"
+  },
+  "dependencies": {
+    "http-auth": "^3.2.3",
+    "http-errors": "^1.6.2",
+    "killable": "^1.0.0",
+    "koa": "^2.3.0",
+    "koa-bodyparser": "^4.2.0",
+    "koa-router": "^7.2.1",
+    "socket.io": "^2.0.3"
+  },
+  "scripts": {
+    "commitmsg": "node ./.hooks/commit-msg",
+    "prepush": "eslint . && npm test",
+    "dev": "supervisor ./index",
+    "test": "istanbul cover -x \"./test/**/*.js\" node_modules/mocha/bin/_mocha -- --recursive ./test/**/*.js",
+    "start": "node ./index"
+  }
+}
