@@ -7,20 +7,20 @@ const config = require("./config");
 describe("outbound", () => {
 
   const url = `http://localhost:${config.port}`;
-  const server = new Bow(config)
-    .outbound("1", (token) => new Promise((resolve, reject) => {
-      if ("ok" === token) {
-        resolve(42);
-      } else {
-        reject(`Wrong token '${token}'`);
-      }
-    }), "1");
 
   let socket = undefined;
   let stopServer = undefined;
 
   before(async () => {
-    stopServer = await server.start();
+    stopServer = await new Bow(config)
+      .outbound("1", (token) => new Promise((resolve, reject) => {
+        if ("ok" === token) {
+          resolve(42);
+        } else {
+          reject(`Wrong token '${token}'`);
+        }
+      }), "1")
+      .start();
   });
 
   it("should fail if specifying a namespace", () => new Promise((resolve, reject) => {
@@ -110,7 +110,9 @@ describe("outbound", () => {
   });
 
   after(async () => {
-    await stopServer();
+    if (stopServer) {
+      await stopServer();
+    }
   });
 
 });

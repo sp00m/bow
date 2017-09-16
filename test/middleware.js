@@ -10,34 +10,34 @@ const addBasicAuth = (url, username, password) => url.replace(/^https?:\/\//, `$
 describe("middleware", () => {
 
   const url = `http://localhost:${config.port}`;
-  const server = new Bow(config)
-    .inbound("/messages", async (payload) => ({
-      name: payload.name,
-      payload,
-      audience: payload.audience
-    }), "1")
-    .middleware("1", async (userId) => {
-      if (42 === userId) {
-        return { role: "admin" };
-      } else {
-        return undefined;
-      }
-    }, {
-      role: (user, role) => user.role === role
-    })
-    .outbound("1", (token) => new Promise((resolve, reject) => {
-      if ("ok" === token) {
-        resolve(42);
-      } else {
-        reject(`Wrong token '${token}'`);
-      }
-    }), "1");
 
   let socket = undefined;
   let stopServer = undefined;
 
   before(async () => {
-    stopServer = await server.start();
+    stopServer = await new Bow(config)
+      .inbound("/messages", async (payload) => ({
+        name: payload.name,
+        payload,
+        audience: payload.audience
+      }), "1")
+      .middleware("1", async (userId) => {
+        if (42 === userId) {
+          return { role: "admin" };
+        } else {
+          return undefined;
+        }
+      }, {
+        role: (user, role) => user.role === role
+      })
+      .outbound("1", (token) => new Promise((resolve, reject) => {
+        if ("ok" === token) {
+          resolve(42);
+        } else {
+          reject(`Wrong token '${token}'`);
+        }
+      }), "1")
+      .start();
   });
 
   it("should resolve audience", () => {
@@ -93,7 +93,9 @@ describe("middleware", () => {
   });
 
   after(async () => {
-    await stopServer();
+    if (stopServer) {
+      await stopServer();
+    }
   });
 
 });

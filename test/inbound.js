@@ -7,13 +7,13 @@ const config = require("./config");
 describe("inbound", () => {
 
   const url = `http://${config.inbound.username}:${config.inbound.password}@localhost:${config.port}`;
-  const server = new Bow(config)
-    .inbound("/messages", (payload) => payload, "1");
 
   let stopServer = undefined;
 
   before(async () => {
-    stopServer = await server.start();
+    stopServer = await new Bow(config)
+      .inbound("/messages", (payload) => payload, "1")
+      .start();
   });
 
   it("should fail if URI is wrong", () => request(url)
@@ -42,7 +42,9 @@ describe("inbound", () => {
     .expect(422)); // eslint-disable-line no-magic-numbers
 
   after(async () => {
-    await stopServer();
+    if (stopServer) {
+      await stopServer();
+    }
   });
 
 });
