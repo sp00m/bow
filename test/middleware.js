@@ -11,12 +11,12 @@ describe("middleware", () => {
 
   const url = `http://localhost:${config.port}`;
   const server = new Bow(config)
-    .addInbound("/messages", async (payload) => ({
+    .inbound("/messages", async (payload) => ({
       name: payload.name,
       payload,
       audience: payload.audience
-    }))
-    .setMiddleware(async (userId) => {
+    }), "1")
+    .middleware("1", async (userId) => {
       if (42 === userId) {
         return { role: "admin" };
       } else {
@@ -25,13 +25,13 @@ describe("middleware", () => {
     }, {
       role: (user, role) => user.role === role
     })
-    .addOutbound("1", (token) => new Promise((resolve, reject) => {
+    .outbound("1", (token) => new Promise((resolve, reject) => {
       if ("ok" === token) {
         resolve(42);
       } else {
         reject(`Wrong token '${token}'`);
       }
-    }));
+    }), "1");
 
   let socket = undefined;
   let stopServer = undefined;

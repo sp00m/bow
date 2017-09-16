@@ -8,7 +8,7 @@ describe("inbound", () => {
 
   const url = `http://${config.inbound.username}:${config.inbound.password}@localhost:${config.port}`;
   const server = new Bow(config)
-    .addInbound("/messages", (payload) => payload);
+    .inbound("/messages", (payload) => payload, "1");
 
   let stopServer = undefined;
 

@@ -8,13 +8,13 @@ describe("outbound", () => {
 
   const url = `http://localhost:${config.port}`;
   const server = new Bow(config)
-    .addOutbound("1", (token) => new Promise((resolve, reject) => {
+    .outbound("1", (token) => new Promise((resolve, reject) => {
       if ("ok" === token) {
         resolve(42);
       } else {
         reject(`Wrong token '${token}'`);
       }
-    }));
+    }), "1");
 
   let socket = undefined;
   let stopServer = undefined;
