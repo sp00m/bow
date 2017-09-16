@@ -3,7 +3,8 @@
   "inbound": {
     "realm": "Bow",
     "username": "johndoe",
-    "password": "qwerty"
+    "password": "qwerty",
+    "redis": {}
   },
   "outbound": {
     "timeout": 1000
