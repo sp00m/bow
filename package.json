@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "check-types": "^7.3.0",
+    "debug": "^3.0.1",
     "http-auth": "^3.2.3",
     "http-errors": "^1.6.2",
     "killable": "^1.0.0",
@@ -39,6 +40,6 @@
   "scripts": {
     "commitmsg": "node ./.hooks/commit-msg",
     "prepush": "eslint . && npm test",
-    "test": "istanbul cover -x \"./test/**/*.js\" node_modules/mocha/bin/_mocha -- --recursive ./test/**/*.js"
+    "test": "DEBUG=bow:* istanbul cover -x \"./test/**/*.js\" node_modules/mocha/bin/_mocha -- --recursive ./test/**/*.js"
   }
 }
