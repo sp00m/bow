@@ -2,7 +2,12 @@
   "name": "bow",
   "version": "1.0.0",
   "description": "Broadcast Over WebSocket",
-  "keywords": [],
+  "keywords": [
+    "bow",
+    "websocket",
+    "microservice",
+    "redis"
+  ],
   "author": "sp00m <christophe.maillard@rocketmail.com>",
   "license": "MIT",
   "repository": {
@@ -27,6 +32,7 @@
   },
   "devDependencies": {
     "babel-eslint": "^7.2.3",
+    "coveralls": "^2.13.1",
     "eslint": "^3.19.0",
     "eslint-plugin-no-null": "^1.0.2",
     "husky": "^0.13.3",
@@ -40,6 +46,7 @@
   "scripts": {
     "commitmsg": "node ./.hooks/commit-msg",
     "prepush": "eslint . && npm test",
-    "test": "DEBUG=bow:* istanbul cover -x \"./test/**/*.js\" node_modules/mocha/bin/_mocha -- --recursive ./test/**/*.js"
+    "test": "DEBUG=bow:* istanbul cover -x \"./test/**/*.js\" node_modules/mocha/bin/_mocha -- --recursive ./test/**/*.js",
+    "coverage": "cat ./coverage/lcov.info | ./node_modules/.bin/coveralls"
   }
 }
