@@ -58,6 +58,10 @@ describe("middleware", () => {
           reject(reason);
         })
 
+        .on("alert", (alert) => {
+          reject(alert);
+        })
+
         .on("welcome", () => {
           const promise = new Promise((messageResolve) => {
             socket.on("hello", (receivedMessage) => {
