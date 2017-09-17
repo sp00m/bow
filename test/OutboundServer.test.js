@@ -8,8 +8,6 @@ const config = require("./config");
 
 describe("outbound", () => {
 
-  const url = `http://localhost:${config.port}`;
-
   let stopServer = undefined;
   let socket = undefined;
 
@@ -21,75 +19,6 @@ describe("outbound", () => {
       }, "v1")
       .start();
   });
-
-  it("should fail if specifying a namespace", () => new Promise((resolve, reject) => {
-    socket = io(`${url}/foo/bar`, { forceNew: true })
-      .on("connect", () => reject("Connection should have been impossible"))
-      .on("alert", (alert) => reject(`Unexpected alert: ${alert}`))
-      .on("error", (error) => {
-        if ("Invalid namespace" === error) {
-          resolve();
-        } else {
-          reject(`Unexpected error: ${error}`);
-        }
-      });
-  }));
-
-  it("should fail if specifying no version", () => new Promise((resolve, reject) => {
-    socket = io(url, { forceNew: true })
-      .on("connect", () => reject("Connection should have been impossible"))
-      .on("alert", (alert) => reject(`Unexpected alert: ${alert}`))
-      .on("error", (error) => {
-        if ("Version not found in handshake request, expected query parameter 'v'" === error) {
-          resolve();
-        } else {
-          reject(`Unexpected error: ${error}`);
-        }
-      });
-  }));
-
-  it("should fail if specifying wrong version", () => new Promise((resolve, reject) => {
-    socket = io(url, { forceNew: true, query: { v: 42 } })
-      .on("connect", () => reject("Connection should have been impossible"))
-      .on("alert", (alert) => reject(`Unexpected alert: ${alert}`))
-      .on("error", (error) => {
-        if ("Version '42' not supported" === error) {
-          resolve();
-        } else {
-          reject(`Unexpected error: ${error}`);
-        }
-      });
-  }));
-
-  it("should disconnect in no authentication is received", () => new Promise((resolve, reject) => {
-    socket = io("http://localhost:3000", { forceNew: true, query: { v: 1 } })
-      .on("error", (error) => reject(`Unexpected error: ${error}`))
-      .on("connect", () => {
-        socket.on("alert", (alert) => {
-          if ("Authentication timeout reached" === alert) {
-            socket.on("disconnect", resolve);
-          } else {
-            reject(`Unexpected alert: ${alert}`);
-          }
-        });
-      });
-  }));
-
-  it("should disconnect if authentication is invalid", () => new Promise((resolve, reject) => {
-    socket = io(url, { forceNew: true, query: { v: 1 } })
-      .on("error", (error) => reject(`Unexpected error: ${error}`))
-      .on("connect", () => {
-        const INVALID_TOKEN = "INVALID_TOKEN";
-        socket.on("alert", (alert) => {
-          if (`Invalid token: '${INVALID_TOKEN}'` === alert) {
-            socket.on("disconnect", resolve);
-          } else {
-            reject(`Unexpected alert: ${alert}`);
-          }
-        });
-        socket.emit("authenticate", INVALID_TOKEN);
-      });
-  }));
 
   afterEach(() => {
     if (check.assigned(socket)) {
@@ -104,5 +33,74 @@ describe("outbound", () => {
       stopServer = undefined;
     }
   });
+
+  it("should fail if specifying a namespace", () => new Promise((resolve, reject) => {
+    socket = io(`http://localhost:${config.port}/foo/bar`, { forceNew: true })
+      .on("connect", () => reject("Connection should have been impossible"))
+      .on("alert", (alert) => reject(`Unexpected alert: ${alert}`))
+      .on("error", (error) => {
+        if ("Invalid namespace" === error) {
+          resolve();
+        } else {
+          reject(`Unexpected error: ${error}`);
+        }
+      });
+  }));
+
+  it("should fail if specifying no version", () => new Promise((resolve, reject) => {
+    socket = io(`http://localhost:${config.port}`, { forceNew: true })
+      .on("connect", () => reject("Connection should have been impossible"))
+      .on("alert", (alert) => reject(`Unexpected alert: ${alert}`))
+      .on("error", (error) => {
+        if ("Version not found in handshake request, expected query parameter 'v'" === error) {
+          resolve();
+        } else {
+          reject(`Unexpected error: ${error}`);
+        }
+      });
+  }));
+
+  it("should fail if specifying wrong version", () => new Promise((resolve, reject) => {
+    socket = io(`http://localhost:${config.port}`, { forceNew: true, query: { v: 42 } })
+      .on("connect", () => reject("Connection should have been impossible"))
+      .on("alert", (alert) => reject(`Unexpected alert: ${alert}`))
+      .on("error", (error) => {
+        if ("Version '42' not supported" === error) {
+          resolve();
+        } else {
+          reject(`Unexpected error: ${error}`);
+        }
+      });
+  }));
+
+  it("should disconnect in no authentication is received", () => new Promise((resolve, reject) => {
+    socket = io(`http://localhost:${config.port}`, { forceNew: true, query: { v: 1 } })
+      .on("error", (error) => reject(`Unexpected error: ${error}`))
+      .on("connect", () => {
+        socket.on("alert", (alert) => {
+          if ("Authentication timeout reached" === alert) {
+            socket.on("disconnect", resolve);
+          } else {
+            reject(`Unexpected alert: ${alert}`);
+          }
+        });
+      });
+  }));
+
+  it("should disconnect if authentication is invalid", () => new Promise((resolve, reject) => {
+    socket = io(`http://localhost:${config.port}`, { forceNew: true, query: { v: 1 } })
+      .on("error", (error) => reject(`Unexpected error: ${error}`))
+      .on("connect", () => {
+        const INVALID_TOKEN = "INVALID_TOKEN";
+        socket.on("alert", (alert) => {
+          if (`Invalid token: '${INVALID_TOKEN}'` === alert) {
+            socket.on("disconnect", resolve);
+          } else {
+            reject(`Unexpected alert: ${alert}`);
+          }
+        });
+        socket.emit("authenticate", INVALID_TOKEN);
+      });
+  }));
 
 });

@@ -17,6 +17,13 @@ describe("InboundServer", () => {
       .start();
   });
 
+  after(async () => {
+    if (check.assigned(stopServer)) {
+      await stopServer();
+      stopServer = undefined;
+    }
+  });
+
   it("should fail if URI is wrong", () =>
     request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${config.port}`)
       .post("/v1/foobar")
@@ -47,12 +54,5 @@ describe("InboundServer", () => {
       .post("/v1/messages")
       .send({ foo: "bar" })
       .expect(422)); // eslint-disable-line no-magic-numbers
-
-  after(async () => {
-    if (check.assigned(stopServer)) {
-      await stopServer();
-      stopServer = undefined;
-    }
-  });
 
 });

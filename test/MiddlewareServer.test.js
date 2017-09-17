@@ -1,43 +1,66 @@
 require("should");
 
-const Bow = require("../");
+const check = require("check-types");
 const io = require("socket.io-client");
 const request = require("supertest");
+
+const Bow = require("../");
 const config = require("./config");
 
-const addBasicAuth = (url, username, password) => url.replace(/^https?:\/\//, `$&${username}:${password}@`);
+const VALID_TOKEN = "VALID_TOKEN";
+const VALID_USER_ID = 42;
+
+const userIdsByToken = {
+  [VALID_TOKEN]: VALID_USER_ID
+};
+
+const usersById = {
+  [VALID_USER_ID]: { role: "admin" }
+};
 
 describe("middleware", () => {
 
-  const url = `http://localhost:${config.port}`;
-
-  let socket = undefined;
   let stopServer = undefined;
+  let socket = undefined;
 
   before(async () => {
     stopServer = await new Bow(config)
+      .middleware("v1", async (userId) => {
+        const user = usersById[userId];
+        if (check.not.assigned(user)) {
+          throw new Error(`Invalid user id: '${userId}'`);
+        }
+        return user;
+      }, {
+        role: (user, role) => user.role === role
+      })
       .inbound("/messages", async (payload) => ({
         name: payload.name,
         payload,
         audience: payload.audience
-      }), "1")
-      .middleware("1", async (userId) => {
-        if (42 === userId) {
-          return { role: "admin" };
-        } else {
-          return undefined;
+      }), "v1")
+      .outbound("v1", async (token) => {
+        const userId = userIdsByToken[token];
+        if (check.not.assigned(userId)) {
+          throw new Error(`Invalid token: '${token}'`);
         }
-      }, {
-        role: (user, role) => user.role === role
-      })
-      .outbound("1", (token) => new Promise((resolve, reject) => {
-        if ("ok" === token) {
-          resolve(42);
-        } else {
-          reject(`Wrong token '${token}'`);
-        }
-      }), "1")
+        return userId;
+      }, "v1")
       .start();
+  });
+
+  afterEach(() => {
+    if (check.assigned(socket)) {
+      socket.disconnect();
+      socket = undefined;
+    }
+  });
+
+  after(async () => {
+    if (check.assigned(stopServer)) {
+      await stopServer();
+      stopServer = undefined;
+    }
   });
 
   it("should resolve audience", () => {
@@ -50,52 +73,29 @@ describe("middleware", () => {
       ]
     };
 
-    return new Promise((resolve, reject) => {
-
-      socket = io(url, { forceNew: true, query: { v: 1 } })
-
-        .on("error", (reason) => {
-          reject(reason);
-        })
-
-        .on("alert", (alert) => {
-          reject(alert);
-        })
-
+    return new Promise((connected, reject) => {
+      socket = io(`http://localhost:${config.port}`, { forceNew: true, query: { v: 1 } })
+        .on("alert", (alert) => reject(`Unexpected alert: ${alert}`))
+        .on("error", (error) => reject(`Unexpected error: ${error}`))
         .on("welcome", () => {
-          const promise = new Promise((messageResolve) => {
+          const promise = new Promise((messageReceived) => {
             socket.on("hello", (receivedMessage) => {
               receivedMessage.should.eql(message);
-              messageResolve();
+              messageReceived();
             });
           });
-          resolve(() => promise);
+          connected(() => promise);
         })
-
-        .on("connect", () => {
-          socket.emit("authenticate", "ok");
-        });
-
-    }).then((promise) => request(addBasicAuth(url, config.inbound.username, config.inbound.password))
-        .post("/messages")
-        .set("Content-Type", "application/json")
-        .send(message)
-        .expect(204) // eslint-disable-line no-magic-numbers
-        .then(promise)
+        .on("connect", () => socket.emit("authenticate", VALID_TOKEN));
+    })
+      .then((promise) =>
+        request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${config.port}`)
+          .post("/messages")
+          .send(message)
+          .expect(204) // eslint-disable-line no-magic-numbers
+          .then(promise)
       );
 
-  });
-
-  afterEach(() => {
-    if (socket) {
-      socket.disconnect();
-    }
-  });
-
-  after(async () => {
-    if (stopServer) {
-      await stopServer();
-    }
   });
 
 });
