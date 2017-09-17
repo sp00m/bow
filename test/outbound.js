@@ -13,6 +13,7 @@ describe("outbound", () => {
 
   before(async () => {
     stopServer = await new Bow(config)
+      .middleware("v1", () => {}, {}) // eslint-disable-line no-empty-function
       .outbound("1", (token) => new Promise((resolve, reject) => {
         if ("ok" === token) {
           resolve(42);

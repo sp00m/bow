@@ -13,6 +13,7 @@ describe("inbound", () => {
   before(async () => {
     stopServer = await new Bow(config)
       .inbound("/messages", (payload) => payload, "1")
+      .middleware("v1", () => {}, {}) // eslint-disable-line no-empty-function
       .start();
   });
 
