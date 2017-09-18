@@ -1,6 +1,7 @@
 require("should");
 
 const check = require("check-types");
+const clone = require("clone");
 const io = require("socket.io-client");
 const request = require("supertest");
 
@@ -29,7 +30,8 @@ const config = {
 };
 
 const buildServer = (port, redis) => {
-  const serverConfig = Object.assign({}, config, { port });
+  const serverConfig = clone(config);
+  serverConfig.port = port;
   if (redis) {
     serverConfig.inbound.redis = {};
   }
