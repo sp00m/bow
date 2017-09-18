@@ -26,6 +26,7 @@ describe("InboundServer", () => {
     stopServer = await new Bow(config)
       .middleware("v1", () => {}, {}) // eslint-disable-line no-empty-function
       .inbound("/v1/messages", (payload) => payload, "v1")
+      .outbound("v1", () => {}, "v1") // eslint-disable-line no-empty-function
       .start();
   });
 
