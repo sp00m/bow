@@ -3,6 +3,7 @@ require("should");
 const check = require("check-types");
 const clone = require("clone");
 const io = require("socket.io-client");
+const pem = require("https-pem");
 const request = require("supertest");
 
 const Bow = require("../");
@@ -29,11 +30,14 @@ const config = {
   }
 };
 
-const buildServer = (port, redis) => {
+const buildServer = (port, options) => {
   const serverConfig = clone(config);
   serverConfig.port = port;
-  if (redis) {
+  if (options.redis) {
     serverConfig.inbound.redis = {};
+  }
+  if (options.https) {
+    serverConfig.https = pem;
   }
   return new Bow(serverConfig)
     .middleware("v1", async (userId) => {
@@ -67,7 +71,7 @@ const message = {
   ]
 };
 
-describe("MiddlewareServer without Redis", () => {
+describe("MiddlewareServer", () => {
 
   const SERVER_PORT = 3000;
 
@@ -76,7 +80,7 @@ describe("MiddlewareServer without Redis", () => {
   let socket2 = undefined;
 
   before(async () => {
-    stopServer = await buildServer(SERVER_PORT, false).start();
+    stopServer = await buildServer(SERVER_PORT, { redis: false, https: false }).start();
   });
 
   afterEach(() => {
@@ -160,6 +164,73 @@ describe("MiddlewareServer without Redis", () => {
 
 });
 
+describe("MiddlewareServer with HTTPS", () => {
+
+  const SERVER_PORT = 3000;
+
+  let NODE_TLS_REJECT_UNAUTHORIZED = undefined;
+  let stopServer = undefined;
+  let socket1 = undefined;
+  let socket2 = undefined;
+
+  before(() => {
+    NODE_TLS_REJECT_UNAUTHORIZED = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+  });
+
+  before(async () => {
+    stopServer = await buildServer(SERVER_PORT, { redis: false, https: true }).start();
+  });
+
+  afterEach(() => {
+    if (check.assigned(socket1)) {
+      socket1.disconnect();
+      socket1 = undefined;
+    }
+  });
+
+  afterEach(() => {
+    if (check.assigned(socket2)) {
+      socket2.disconnect();
+      socket2 = undefined;
+    }
+  });
+
+  after(async () => {
+    if (check.assigned(stopServer)) {
+      await stopServer();
+      stopServer = undefined;
+    }
+  });
+
+  after(() => {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = NODE_TLS_REJECT_UNAUTHORIZED;
+  });
+
+  it("should resolve audience", () => new Promise((connected, reject) => {
+    socket1 = io(`https://localhost:${SERVER_PORT}`, { rejectUnauthorized: false, forceNew: true, query: { v: 1 } })
+      .on("alert", (alert) => reject(`Unexpected alert: ${alert}`))
+      .on("error", (error) => reject(`Unexpected error: ${error}`))
+      .on("welcome", () => {
+        const messageReceivedPromise = new Promise((messageReceived) => {
+          socket1.on("hello", (receivedMessage) => {
+            receivedMessage.should.eql(message);
+            messageReceived();
+          });
+        });
+        connected(() => messageReceivedPromise);
+      })
+      .on("connect", () => socket1.emit("authenticate", VALID_TOKEN));
+  }).then((messageReceivedPromise) =>
+    request(`https://${config.inbound.username}:${config.inbound.password}@localhost:${SERVER_PORT}`)
+      .post("/messages")
+      .send(message)
+      .expect(204) // eslint-disable-line no-magic-numbers
+      .then(messageReceivedPromise)
+  ));
+
+});
+
 describe("MiddlewareServer with Redis", () => {
 
   const SERVER1_PORT = 3000;
@@ -170,8 +241,8 @@ describe("MiddlewareServer with Redis", () => {
   let socket = undefined;
 
   before(async () => {
-    stopServer1 = await buildServer(SERVER1_PORT, true).start();
-    stopServer2 = await buildServer(SERVER2_PORT, true).start();
+    stopServer1 = await buildServer(SERVER1_PORT, { redis: true, https: false }).start();
+    stopServer2 = await buildServer(SERVER2_PORT, { redis: true, https: false }).start();
   });
 
   afterEach(() => {
