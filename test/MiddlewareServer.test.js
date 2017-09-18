@@ -76,24 +76,24 @@ describe("MiddlewareServer", () => {
   const SERVER_PORT = 3000;
 
   let stopServer = undefined;
-  let socket1 = undefined;
-  let socket2 = undefined;
+  let firstSocket = undefined;
+  let secondSocket = undefined;
 
   before(async () => {
     stopServer = await buildServer(SERVER_PORT, { redis: false, https: false }).start();
   });
 
   afterEach(() => {
-    if (check.assigned(socket1)) {
-      socket1.disconnect();
-      socket1 = undefined;
+    if (check.assigned(firstSocket)) {
+      firstSocket.disconnect();
+      firstSocket = undefined;
     }
   });
 
   afterEach(() => {
-    if (check.assigned(socket2)) {
-      socket2.disconnect();
-      socket2 = undefined;
+    if (check.assigned(secondSocket)) {
+      secondSocket.disconnect();
+      secondSocket = undefined;
     }
   });
 
@@ -104,62 +104,62 @@ describe("MiddlewareServer", () => {
     }
   });
 
-  it("should resolve audience", () => new Promise((connected, reject) => {
-    socket1 = io(`http://localhost:${SERVER_PORT}`, { forceNew: true, query: { v: 1 } })
-      .on("alert", (alert) => reject(`Unexpected alert: ${alert}`))
-      .on("error", (error) => reject(`Unexpected error: ${error}`))
+  it("should resolve audience", () => new Promise((connectionSucceeded, connectionFailed) => {
+    firstSocket = io(`http://localhost:${SERVER_PORT}`, { forceNew: true, query: { v: 1 } })
+      .on("alert", (alert) => connectionFailed(`Unexpected alert: ${alert}`))
+      .on("error", (error) => connectionFailed(`Unexpected error: ${error}`))
       .on("welcome", () => {
         const messageReceivedPromise = new Promise((messageReceived) => {
-          socket1.on("hello", (receivedMessage) => {
+          firstSocket.on("hello", (receivedMessage) => {
             receivedMessage.should.eql(message);
             messageReceived();
           });
         });
-        connected(() => messageReceivedPromise);
+        connectionSucceeded(() => messageReceivedPromise);
       })
-      .on("connect", () => socket1.emit("authenticate", VALID_TOKEN));
-  }).then((messageReceivedPromise) =>
+      .on("connect", () => firstSocket.emit("authenticate", VALID_TOKEN));
+  }).then((messageReceivedPromiseGetter) =>
     request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${SERVER_PORT}`)
       .post("/messages")
       .send(message)
       .expect(204) // eslint-disable-line no-magic-numbers
-      .then(messageReceivedPromise)
+      .then(messageReceivedPromiseGetter)
   ));
 
-  it("should handle same user connected multiple times", () => new Promise((connected1, reject1) => {
-    socket1 = io(`http://localhost:${SERVER_PORT}`, { forceNew: true, query: { v: 1 } })
-      .on("alert", (alert) => reject1(`Unexpected alert: ${alert}`))
-      .on("error", (error) => reject1(`Unexpected error: ${error}`))
+  it("should handle same user connected multiple times", () => new Promise((firstConnectionSucceeded, firstConnectionFailed) => {
+    firstSocket = io(`http://localhost:${SERVER_PORT}`, { forceNew: true, query: { v: 1 } })
+      .on("alert", (alert) => firstConnectionFailed(`Unexpected alert: ${alert}`))
+      .on("error", (error) => firstConnectionFailed(`Unexpected error: ${error}`))
       .on("welcome", () => {
-        const messageReceivedPromise1 = new Promise((messageReceived1) => {
-          socket1.on("hello", (receivedMessage1) => {
-            receivedMessage1.should.eql(message);
-            messageReceived1();
+        const firstMessageReceivedPromise = new Promise((firstMessageReceived) => {
+          firstSocket.on("hello", (firstReceivedMessage) => {
+            firstReceivedMessage.should.eql(message);
+            firstMessageReceived();
           });
         });
-        connected1(() => messageReceivedPromise1);
+        firstConnectionSucceeded(() => firstMessageReceivedPromise);
       })
-      .on("connect", () => socket1.emit("authenticate", VALID_TOKEN));
-  }).then((messageReceivedPromise1) => new Promise((connected2, reject2) => {
-    socket2 = io(`http://localhost:${SERVER_PORT}`, { forceNew: true, query: { v: 1 } })
-      .on("alert", (alert) => reject2(`Unexpected alert: ${alert}`))
-      .on("error", (error) => reject2(`Unexpected error: ${error}`))
+      .on("connect", () => firstSocket.emit("authenticate", VALID_TOKEN));
+  }).then((firstMessageReceivedPromiseGetter) => new Promise((secondConnectionSucceeded, secondConnectionFailed) => {
+    secondSocket = io(`http://localhost:${SERVER_PORT}`, { forceNew: true, query: { v: 1 } })
+      .on("alert", (alert) => secondConnectionFailed(`Unexpected alert: ${alert}`))
+      .on("error", (error) => secondConnectionFailed(`Unexpected error: ${error}`))
       .on("welcome", () => {
-        const messageReceivedPromise2 = new Promise((messageReceived2) => {
-          socket2.on("hello", (receivedMessage2) => {
-            receivedMessage2.should.eql(message);
-            messageReceived2();
+        const secondMessageReceivedPromise = new Promise((secondMessageReceived) => {
+          secondSocket.on("hello", (secondReceivedMessage) => {
+            secondReceivedMessage.should.eql(message);
+            secondMessageReceived();
           });
         });
-        connected2(() => Promise.all([messageReceivedPromise1, messageReceivedPromise2]));
+        secondConnectionSucceeded(() => Promise.all([firstMessageReceivedPromiseGetter(), secondMessageReceivedPromise]));
       })
-      .on("connect", () => socket2.emit("authenticate", VALID_TOKEN));
-  })).then((messageReceivedPromise) =>
+      .on("connect", () => secondSocket.emit("authenticate", VALID_TOKEN));
+  })).then((messageReceivedPromiseGetter) =>
     request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${SERVER_PORT}`)
       .post("/messages")
       .send(message)
       .expect(204) // eslint-disable-line no-magic-numbers
-      .then(messageReceivedPromise)
+      .then(messageReceivedPromiseGetter)
   ));
 
 });
@@ -170,8 +170,8 @@ describe("MiddlewareServer with HTTPS", () => {
 
   let NODE_TLS_REJECT_UNAUTHORIZED = undefined;
   let stopServer = undefined;
-  let socket1 = undefined;
-  let socket2 = undefined;
+  let firstSocket = undefined;
+  let secondSocket = undefined;
 
   before(() => {
     NODE_TLS_REJECT_UNAUTHORIZED = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
@@ -183,16 +183,16 @@ describe("MiddlewareServer with HTTPS", () => {
   });
 
   afterEach(() => {
-    if (check.assigned(socket1)) {
-      socket1.disconnect();
-      socket1 = undefined;
+    if (check.assigned(firstSocket)) {
+      firstSocket.disconnect();
+      firstSocket = undefined;
     }
   });
 
   afterEach(() => {
-    if (check.assigned(socket2)) {
-      socket2.disconnect();
-      socket2 = undefined;
+    if (check.assigned(secondSocket)) {
+      secondSocket.disconnect();
+      secondSocket = undefined;
     }
   });
 
@@ -207,42 +207,42 @@ describe("MiddlewareServer with HTTPS", () => {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = NODE_TLS_REJECT_UNAUTHORIZED;
   });
 
-  it("should resolve audience", () => new Promise((connected, reject) => {
-    socket1 = io(`https://localhost:${SERVER_PORT}`, { rejectUnauthorized: false, forceNew: true, query: { v: 1 } })
-      .on("alert", (alert) => reject(`Unexpected alert: ${alert}`))
-      .on("error", (error) => reject(`Unexpected error: ${error}`))
+  it("should resolve audience", () => new Promise((connectionSucceeded, connectionFailed) => {
+    firstSocket = io(`https://localhost:${SERVER_PORT}`, { rejectUnauthorized: false, forceNew: true, query: { v: 1 } })
+      .on("alert", (alert) => connectionFailed(`Unexpected alert: ${alert}`))
+      .on("error", (error) => connectionFailed(`Unexpected error: ${error}`))
       .on("welcome", () => {
         const messageReceivedPromise = new Promise((messageReceived) => {
-          socket1.on("hello", (receivedMessage) => {
+          firstSocket.on("hello", (receivedMessage) => {
             receivedMessage.should.eql(message);
             messageReceived();
           });
         });
-        connected(() => messageReceivedPromise);
+        connectionSucceeded(() => messageReceivedPromise);
       })
-      .on("connect", () => socket1.emit("authenticate", VALID_TOKEN));
-  }).then((messageReceivedPromise) =>
+      .on("connect", () => firstSocket.emit("authenticate", VALID_TOKEN));
+  }).then((messageReceivedPromiseGetter) =>
     request(`https://${config.inbound.username}:${config.inbound.password}@localhost:${SERVER_PORT}`)
       .post("/messages")
       .send(message)
       .expect(204) // eslint-disable-line no-magic-numbers
-      .then(messageReceivedPromise)
+      .then(messageReceivedPromiseGetter)
   ));
 
 });
 
 describe("MiddlewareServer with Redis", () => {
 
-  const SERVER1_PORT = 3000;
-  const SERVER2_PORT = 3001;
+  const FIRST_SERVER_PORT = 3000;
+  const SECOND_SERVER_PORT = 3001;
 
-  let stopServer1 = undefined;
-  let stopServer2 = undefined;
+  let stopFirstServer = undefined;
+  let stopSecondServer = undefined;
   let socket = undefined;
 
   before(async () => {
-    stopServer1 = await buildServer(SERVER1_PORT, { redis: true, https: false }).start();
-    stopServer2 = await buildServer(SERVER2_PORT, { redis: true, https: false }).start();
+    stopFirstServer = await buildServer(FIRST_SERVER_PORT, { redis: true, https: false }).start();
+    stopSecondServer = await buildServer(SECOND_SERVER_PORT, { redis: true, https: false }).start();
   });
 
   afterEach(() => {
@@ -253,23 +253,23 @@ describe("MiddlewareServer with Redis", () => {
   });
 
   after(async () => {
-    if (check.assigned(stopServer1)) {
-      await stopServer1();
-      stopServer1 = undefined;
+    if (check.assigned(stopFirstServer)) {
+      await stopFirstServer();
+      stopFirstServer = undefined;
     }
   });
 
   after(async () => {
-    if (check.assigned(stopServer2)) {
-      await stopServer2();
-      stopServer2 = undefined;
+    if (check.assigned(stopSecondServer)) {
+      await stopSecondServer();
+      stopSecondServer = undefined;
     }
   });
 
-  it("should resolve audience on distinct instances", () => new Promise((connected, reject) => {
-    socket = io(`http://localhost:${SERVER1_PORT}`, { forceNew: true, query: { v: 1 } })
-      .on("alert", (alert) => reject(`Unexpected alert: ${alert}`))
-      .on("error", (error) => reject(`Unexpected error: ${error}`))
+  it("should resolve audience on distinct instances", () => new Promise((connectionSucceeded, connectionFailed) => {
+    socket = io(`http://localhost:${FIRST_SERVER_PORT}`, { forceNew: true, query: { v: 1 } })
+      .on("alert", (alert) => connectionFailed(`Unexpected alert: ${alert}`))
+      .on("error", (error) => connectionFailed(`Unexpected error: ${error}`))
       .on("welcome", () => {
         const messageReceivedPromise = new Promise((messageReceived) => {
           socket.on("hello", (receivedMessage) => {
@@ -277,21 +277,21 @@ describe("MiddlewareServer with Redis", () => {
             messageReceived();
           });
         });
-        connected(() => messageReceivedPromise);
+        connectionSucceeded(() => messageReceivedPromise);
       })
       .on("connect", () => socket.emit("authenticate", VALID_TOKEN));
-  }).then((messageReceivedPromise) =>
-    request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${SERVER2_PORT}`)
+  }).then((messageReceivedPromiseGetter) =>
+    request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${SECOND_SERVER_PORT}`)
       .post("/messages")
       .send(message)
       .expect(204) // eslint-disable-line no-magic-numbers
-      .then(messageReceivedPromise)
+      .then(messageReceivedPromiseGetter)
   ));
 
-  it("should resolve audience on the same instance", () => new Promise((connected, reject) => {
-    socket = io(`http://localhost:${SERVER1_PORT}`, { forceNew: true, query: { v: 1 } })
-      .on("alert", (alert) => reject(`Unexpected alert: ${alert}`))
-      .on("error", (error) => reject(`Unexpected error: ${error}`))
+  it("should resolve audience on the same instance", () => new Promise((connectionSucceeded, connectionFailed) => {
+    socket = io(`http://localhost:${FIRST_SERVER_PORT}`, { forceNew: true, query: { v: 1 } })
+      .on("alert", (alert) => connectionFailed(`Unexpected alert: ${alert}`))
+      .on("error", (error) => connectionFailed(`Unexpected error: ${error}`))
       .on("welcome", () => {
         const messageReceivedPromise = new Promise((messageReceived) => {
           socket.on("hello", (receivedMessage) => {
@@ -299,15 +299,15 @@ describe("MiddlewareServer with Redis", () => {
             messageReceived();
           });
         });
-        connected(() => messageReceivedPromise);
+        connectionSucceeded(() => messageReceivedPromise);
       })
       .on("connect", () => socket.emit("authenticate", VALID_TOKEN));
-  }).then((messageReceivedPromise) =>
-    request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${SERVER1_PORT}`)
+  }).then((messageReceivedPromiseGetter) =>
+    request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${FIRST_SERVER_PORT}`)
       .post("/messages")
       .send(message)
       .expect(204) // eslint-disable-line no-magic-numbers
-      .then(messageReceivedPromise)
+      .then(messageReceivedPromiseGetter)
   ));
 
 });
