@@ -4,9 +4,21 @@ const check = require("check-types");
 const request = require("supertest");
 
 const Bow = require("../");
-const config = require("./config");
 
 describe("InboundServer", () => {
+
+  const config = {
+    port: 3000,
+    inbound: {
+      realm: "Bow",
+      username: "johndoe",
+      password: "qwerty",
+      redis: {}
+    },
+    outbound: {
+      timeout: 1000
+    }
+  };
 
   let stopServer = undefined;
 

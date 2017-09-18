@@ -4,9 +4,21 @@ const check = require("check-types");
 const io = require("socket.io-client");
 
 const Bow = require("../");
-const config = require("./config");
 
-describe("outbound", () => {
+describe("OutboundServer", () => {
+
+  const config = {
+    port: 3000,
+    inbound: {
+      realm: "Bow",
+      username: "johndoe",
+      password: "qwerty",
+      redis: {}
+    },
+    outbound: {
+      timeout: 1000
+    }
+  };
 
   let stopServer = undefined;
   let socket = undefined;
