@@ -71,6 +71,45 @@ const message = {
   ]
 };
 
+const createSocketExpectingMessage = (url, v, connectionSucceeded, connectionFailed, ...pendingPromiseGetters) => {
+  const socket = io(url, { rejectUnauthorized: false, forceNew: true, query: { v } })
+    .on("alert", (alert) => connectionFailed(`Unexpected alert: ${alert}`))
+    .on("error", (error) => connectionFailed(`Unexpected error: ${error}`))
+    .on("welcome", () => {
+      const messageReceivedPromise = new Promise((messageReceived) => {
+        socket.on(message.name, (receivedMessage) => {
+          receivedMessage.should.eql(message);
+          messageReceived();
+        });
+      });
+      connectionSucceeded(() => Promise.all(pendingPromiseGetters
+        .map((pendingPromiseGetter) => pendingPromiseGetter())
+        .concat(messageReceivedPromise)));
+    })
+    .on("connect", () => socket.emit("authenticate", VALID_TOKEN));
+  return socket;
+};
+
+const createSocketNotExpectingMessage = (url, v, connectionSucceeded, connectionFailed, ...pendingPromiseGetters) => {
+  const socket = io(url, { rejectUnauthorized: false, forceNew: true, query: { v: 2 } })
+    .on("alert", (alert) => connectionFailed(`Unexpected alert: ${alert}`))
+    .on("error", (error) => connectionFailed(`Unexpected error: ${error}`))
+    .on("welcome", () => {
+      const messageNotReceivedPromise = new Promise((messageNotReceived, messageReceived) => {
+        const timeout = setTimeout(messageNotReceived, 1000); // eslint-disable-line no-magic-numbers
+        socket.on(message.name, () => {
+          clearTimeout(timeout);
+          messageReceived("Message has been received");
+        });
+      });
+      connectionSucceeded(() => Promise.all(pendingPromiseGetters
+        .map((pendingPromiseGetter) => pendingPromiseGetter())
+        .concat(messageNotReceivedPromise)));
+    })
+    .on("connect", () => socket.emit("authenticate", VALID_TOKEN));
+  return socket;
+};
+
 describe("MiddlewareServer", () => {
 
   const SERVER_PORT = 3000;
@@ -105,19 +144,12 @@ describe("MiddlewareServer", () => {
   });
 
   it("should resolve audience", () => new Promise((connectionSucceeded, connectionFailed) => {
-    firstSocket = io(`http://localhost:${SERVER_PORT}`, { forceNew: true, query: { v: 1 } })
-      .on("alert", (alert) => connectionFailed(`Unexpected alert: ${alert}`))
-      .on("error", (error) => connectionFailed(`Unexpected error: ${error}`))
-      .on("welcome", () => {
-        const messageReceivedPromise = new Promise((messageReceived) => {
-          firstSocket.on(message.name, (receivedMessage) => {
-            receivedMessage.should.eql(message);
-            messageReceived();
-          });
-        });
-        connectionSucceeded(() => messageReceivedPromise);
-      })
-      .on("connect", () => firstSocket.emit("authenticate", VALID_TOKEN));
+    firstSocket = createSocketExpectingMessage(
+      `http://localhost:${SERVER_PORT}`,
+      1,
+      connectionSucceeded,
+      connectionFailed
+    );
   }).then((messageReceivedPromiseGetter) =>
     request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${SERVER_PORT}`)
       .post("/messages")
@@ -127,33 +159,20 @@ describe("MiddlewareServer", () => {
   ));
 
   it("should handle same user connected multiple times", () => new Promise((firstConnectionSucceeded, firstConnectionFailed) => {
-    firstSocket = io(`http://localhost:${SERVER_PORT}`, { forceNew: true, query: { v: 1 } })
-      .on("alert", (alert) => firstConnectionFailed(`Unexpected alert: ${alert}`))
-      .on("error", (error) => firstConnectionFailed(`Unexpected error: ${error}`))
-      .on("welcome", () => {
-        const firstMessageReceivedPromise = new Promise((firstMessageReceived) => {
-          firstSocket.on(message.name, (firstReceivedMessage) => {
-            firstReceivedMessage.should.eql(message);
-            firstMessageReceived();
-          });
-        });
-        firstConnectionSucceeded(() => firstMessageReceivedPromise);
-      })
-      .on("connect", () => firstSocket.emit("authenticate", VALID_TOKEN));
+    firstSocket = createSocketExpectingMessage(
+      `http://localhost:${SERVER_PORT}`,
+      1,
+      firstConnectionSucceeded,
+      firstConnectionFailed
+    );
   }).then((firstMessageReceivedPromiseGetter) => new Promise((secondConnectionSucceeded, secondConnectionFailed) => {
-    secondSocket = io(`http://localhost:${SERVER_PORT}`, { forceNew: true, query: { v: 1 } })
-      .on("alert", (alert) => secondConnectionFailed(`Unexpected alert: ${alert}`))
-      .on("error", (error) => secondConnectionFailed(`Unexpected error: ${error}`))
-      .on("welcome", () => {
-        const secondMessageReceivedPromise = new Promise((secondMessageReceived) => {
-          secondSocket.on(message.name, (secondReceivedMessage) => {
-            secondReceivedMessage.should.eql(message);
-            secondMessageReceived();
-          });
-        });
-        secondConnectionSucceeded(() => Promise.all([firstMessageReceivedPromiseGetter(), secondMessageReceivedPromise]));
-      })
-      .on("connect", () => secondSocket.emit("authenticate", VALID_TOKEN));
+    secondSocket = createSocketExpectingMessage(
+      `http://localhost:${SERVER_PORT}`,
+      1,
+      secondConnectionSucceeded,
+      secondConnectionFailed,
+      firstMessageReceivedPromiseGetter
+    );
   })).then((messageReceivedPromiseGetter) =>
     request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${SERVER_PORT}`)
       .post("/messages")
@@ -233,34 +252,20 @@ describe("MiddlewareServer with multiple middlewares", () => {
   });
 
   it("should resolve audience", () => new Promise((firstConnectionSucceeded, firstConnectionFailed) => {
-    firstSocket = io(`http://localhost:${SERVER_PORT}`, { forceNew: true, query: { v: 1 } })
-      .on("alert", (alert) => firstConnectionFailed(`Unexpected alert: ${alert}`))
-      .on("error", (error) => firstConnectionFailed(`Unexpected error: ${error}`))
-      .on("welcome", () => {
-        const messageReceivedPromise = new Promise((messageReceived) => {
-          firstSocket.on(message.name, (firstReceivedMessage) => {
-            firstReceivedMessage.should.eql(message);
-            messageReceived();
-          });
-        });
-        firstConnectionSucceeded(() => messageReceivedPromise);
-      })
-      .on("connect", () => firstSocket.emit("authenticate", VALID_TOKEN));
+    firstSocket = createSocketExpectingMessage(
+      `http://localhost:${SERVER_PORT}`,
+      1,
+      firstConnectionSucceeded,
+      firstConnectionFailed
+    );
   }).then((messageReceivedPromiseGetter) => new Promise((secondConnectionSucceeded, secondConnectionFailed) => {
-    secondSocket = io(`http://localhost:${SERVER_PORT}`, { forceNew: true, query: { v: 2 } })
-      .on("alert", (alert) => secondConnectionFailed(`Unexpected alert: ${alert}`))
-      .on("error", (error) => secondConnectionFailed(`Unexpected error: ${error}`))
-      .on("welcome", () => {
-        const messageNotReceivedPromise = new Promise((messageNotReceived, messageReceived) => {
-          const timeout = setTimeout(messageNotReceived, 1000); // eslint-disable-line no-magic-numbers
-          secondSocket.on(message.name, () => {
-            clearTimeout(timeout);
-            messageReceived("Message has been received");
-          });
-        });
-        secondConnectionSucceeded(() => Promise.all([messageReceivedPromiseGetter(), messageNotReceivedPromise]));
-      })
-      .on("connect", () => secondSocket.emit("authenticate", VALID_TOKEN));
+    secondSocket = createSocketNotExpectingMessage(
+      `http://localhost:${SERVER_PORT}`,
+      2,
+      secondConnectionSucceeded,
+      secondConnectionFailed,
+      messageReceivedPromiseGetter
+    );
   })).then((allMessagesReceivedPromiseGetter) =>
     request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${SERVER_PORT}`)
       .post("/v1/messages")
@@ -277,8 +282,7 @@ describe("MiddlewareServer with HTTPS", () => {
 
   let NODE_TLS_REJECT_UNAUTHORIZED = undefined;
   let stopServer = undefined;
-  let firstSocket = undefined;
-  let secondSocket = undefined;
+  let socket = undefined;
 
   before(() => {
     NODE_TLS_REJECT_UNAUTHORIZED = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
@@ -290,16 +294,9 @@ describe("MiddlewareServer with HTTPS", () => {
   });
 
   afterEach(() => {
-    if (check.assigned(firstSocket)) {
-      firstSocket.disconnect();
-      firstSocket = undefined;
-    }
-  });
-
-  afterEach(() => {
-    if (check.assigned(secondSocket)) {
-      secondSocket.disconnect();
-      secondSocket = undefined;
+    if (check.assigned(socket)) {
+      socket.disconnect();
+      socket = undefined;
     }
   });
 
@@ -315,19 +312,12 @@ describe("MiddlewareServer with HTTPS", () => {
   });
 
   it("should resolve audience", () => new Promise((connectionSucceeded, connectionFailed) => {
-    firstSocket = io(`https://localhost:${SERVER_PORT}`, { rejectUnauthorized: false, forceNew: true, query: { v: 1 } })
-      .on("alert", (alert) => connectionFailed(`Unexpected alert: ${alert}`))
-      .on("error", (error) => connectionFailed(`Unexpected error: ${error}`))
-      .on("welcome", () => {
-        const messageReceivedPromise = new Promise((messageReceived) => {
-          firstSocket.on(message.name, (receivedMessage) => {
-            receivedMessage.should.eql(message);
-            messageReceived();
-          });
-        });
-        connectionSucceeded(() => messageReceivedPromise);
-      })
-      .on("connect", () => firstSocket.emit("authenticate", VALID_TOKEN));
+    socket = createSocketExpectingMessage(
+      `https://localhost:${SERVER_PORT}`,
+      1,
+      connectionSucceeded,
+      connectionFailed
+    );
   }).then((messageReceivedPromiseGetter) =>
     request(`https://${config.inbound.username}:${config.inbound.password}@localhost:${SERVER_PORT}`)
       .post("/messages")
@@ -374,19 +364,12 @@ describe("MiddlewareServer with Redis", () => {
   });
 
   it("should resolve audience on distinct instances", () => new Promise((connectionSucceeded, connectionFailed) => {
-    socket = io(`http://localhost:${FIRST_SERVER_PORT}`, { forceNew: true, query: { v: 1 } })
-      .on("alert", (alert) => connectionFailed(`Unexpected alert: ${alert}`))
-      .on("error", (error) => connectionFailed(`Unexpected error: ${error}`))
-      .on("welcome", () => {
-        const messageReceivedPromise = new Promise((messageReceived) => {
-          socket.on(message.name, (receivedMessage) => {
-            receivedMessage.should.eql(message);
-            messageReceived();
-          });
-        });
-        connectionSucceeded(() => messageReceivedPromise);
-      })
-      .on("connect", () => socket.emit("authenticate", VALID_TOKEN));
+    socket = createSocketExpectingMessage(
+      `http://localhost:${FIRST_SERVER_PORT}`,
+      1,
+      connectionSucceeded,
+      connectionFailed
+    );
   }).then((messageReceivedPromiseGetter) =>
     request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${SECOND_SERVER_PORT}`)
       .post("/messages")
@@ -396,19 +379,12 @@ describe("MiddlewareServer with Redis", () => {
   ));
 
   it("should resolve audience on the same instance", () => new Promise((connectionSucceeded, connectionFailed) => {
-    socket = io(`http://localhost:${FIRST_SERVER_PORT}`, { forceNew: true, query: { v: 1 } })
-      .on("alert", (alert) => connectionFailed(`Unexpected alert: ${alert}`))
-      .on("error", (error) => connectionFailed(`Unexpected error: ${error}`))
-      .on("welcome", () => {
-        const messageReceivedPromise = new Promise((messageReceived) => {
-          socket.on(message.name, (receivedMessage) => {
-            receivedMessage.should.eql(message);
-            messageReceived();
-          });
-        });
-        connectionSucceeded(() => messageReceivedPromise);
-      })
-      .on("connect", () => socket.emit("authenticate", VALID_TOKEN));
+    socket = createSocketExpectingMessage(
+      `http://localhost:${FIRST_SERVER_PORT}`,
+      1,
+      connectionSucceeded,
+      connectionFailed
+    );
   }).then((messageReceivedPromiseGetter) =>
     request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${FIRST_SERVER_PORT}`)
       .post("/messages")
