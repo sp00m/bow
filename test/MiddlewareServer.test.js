@@ -71,44 +71,41 @@ const message = {
   ]
 };
 
-const createSocketExpectingMessage = (url, v, connectionSucceeded, connectionFailed, ...pendingPromiseGetters) => {
-  const socket = io(url, { rejectUnauthorized: false, forceNew: true, query: { v } })
+const createSocket = (url, v, connectionFailed, buildOnWelcome) => {
+  const socket = io(url, { rejectUnauthorized: false, forceNew: true, query: { v } });
+  return socket
     .on("alert", (alert) => connectionFailed(`Unexpected alert: ${alert}`))
     .on("error", (error) => connectionFailed(`Unexpected error: ${error}`))
-    .on("welcome", () => {
-      const messageReceivedPromise = new Promise((messageReceived) => {
-        socket.on(message.name, (receivedMessage) => {
-          receivedMessage.should.eql(message);
-          messageReceived();
-        });
-      });
-      connectionSucceeded(() => Promise.all(pendingPromiseGetters
-        .map((pendingPromiseGetter) => pendingPromiseGetter())
-        .concat(messageReceivedPromise)));
-    })
+    .on("welcome", buildOnWelcome(socket))
     .on("connect", () => socket.emit("authenticate", VALID_TOKEN));
-  return socket;
 };
 
-const createSocketNotExpectingMessage = (url, v, connectionSucceeded, connectionFailed, ...pendingPromiseGetters) => {
-  const socket = io(url, { rejectUnauthorized: false, forceNew: true, query: { v: 2 } })
-    .on("alert", (alert) => connectionFailed(`Unexpected alert: ${alert}`))
-    .on("error", (error) => connectionFailed(`Unexpected error: ${error}`))
-    .on("welcome", () => {
-      const messageNotReceivedPromise = new Promise((messageNotReceived, messageReceived) => {
-        const timeout = setTimeout(messageNotReceived, 1000); // eslint-disable-line no-magic-numbers
-        socket.on(message.name, () => {
-          clearTimeout(timeout);
-          messageReceived("Message has been received");
-        });
+const createSocketExpectingMessage = (url, v, connectionSucceeded, connectionFailed, ...pendingPromiseGetters) =>
+  createSocket(url, v, connectionFailed, (socket) => () => {
+    const messageReceivedPromise = new Promise((messageReceived) => {
+      socket.on(message.name, (receivedMessage) => {
+        receivedMessage.should.eql(message);
+        messageReceived();
       });
-      connectionSucceeded(() => Promise.all(pendingPromiseGetters
-        .map((pendingPromiseGetter) => pendingPromiseGetter())
-        .concat(messageNotReceivedPromise)));
-    })
-    .on("connect", () => socket.emit("authenticate", VALID_TOKEN));
-  return socket;
-};
+    });
+    connectionSucceeded(() => Promise.all(pendingPromiseGetters
+      .map((pendingPromiseGetter) => pendingPromiseGetter())
+      .concat(messageReceivedPromise)));
+  });
+
+const createSocketNotExpectingMessage = (url, v, connectionSucceeded, connectionFailed, ...pendingPromiseGetters) =>
+  createSocket(url, v, connectionFailed, (socket) => () => {
+    const messageNotReceivedPromise = new Promise((messageNotReceived, messageReceived) => {
+      const timeout = setTimeout(messageNotReceived, 1000); // eslint-disable-line no-magic-numbers
+      socket.on(message.name, () => {
+        clearTimeout(timeout);
+        messageReceived("Message has been received");
+      });
+    });
+    connectionSucceeded(() => Promise.all(pendingPromiseGetters
+      .map((pendingPromiseGetter) => pendingPromiseGetter())
+      .concat(messageNotReceivedPromise)));
+  });
 
 describe("MiddlewareServer", () => {
 
