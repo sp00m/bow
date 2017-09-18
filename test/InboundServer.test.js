@@ -36,7 +36,7 @@ describe("InboundServer", () => {
     }
   });
 
-  it("should fail if URI is wrong", () =>
+  it("should fail if path is wrong", () =>
     request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${config.port}`)
       .post("/v1/foobar")
       .expect(404)); // eslint-disable-line no-magic-numbers

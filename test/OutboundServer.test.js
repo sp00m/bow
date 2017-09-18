@@ -46,7 +46,7 @@ describe("OutboundServer", () => {
     }
   });
 
-  it("should fail if specifying a namespace", () => new Promise((resolve, reject) => {
+  it("should fail when specifying a namespace", () => new Promise((resolve, reject) => {
     socket = io(`http://localhost:${config.port}/foo/bar`, { forceNew: true })
       .on("connect", () => reject("Connection should have been impossible"))
       .on("alert", (alert) => reject(`Unexpected alert: ${alert}`))
@@ -59,7 +59,7 @@ describe("OutboundServer", () => {
       });
   }));
 
-  it("should fail if specifying no version", () => new Promise((resolve, reject) => {
+  it("should fail when specifying no version", () => new Promise((resolve, reject) => {
     socket = io(`http://localhost:${config.port}`, { forceNew: true })
       .on("connect", () => reject("Connection should have been impossible"))
       .on("alert", (alert) => reject(`Unexpected alert: ${alert}`))
@@ -72,7 +72,7 @@ describe("OutboundServer", () => {
       });
   }));
 
-  it("should fail if specifying wrong version", () => new Promise((resolve, reject) => {
+  it("should fail when specifying a wrong version", () => new Promise((resolve, reject) => {
     socket = io(`http://localhost:${config.port}`, { forceNew: true, query: { v: 42 } })
       .on("connect", () => reject("Connection should have been impossible"))
       .on("alert", (alert) => reject(`Unexpected alert: ${alert}`))
@@ -85,7 +85,7 @@ describe("OutboundServer", () => {
       });
   }));
 
-  it("should disconnect in no authentication is received", () => new Promise((resolve, reject) => {
+  it("should disconnect if no authentication is received", () => new Promise((resolve, reject) => {
     socket = io(`http://localhost:${config.port}`, { forceNew: true, query: { v: 1 } })
       .on("error", (error) => reject(`Unexpected error: ${error}`))
       .on("connect", () => {
