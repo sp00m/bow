@@ -156,21 +156,21 @@ describe("MiddlewareServer with Redis", () => {
       .on("alert", (alert) => reject(`Unexpected alert: ${alert}`))
       .on("error", (error) => reject(`Unexpected error: ${error}`))
       .on("welcome", () => {
-        const promise = new Promise((messageReceived) => {
+        const messageReceivedPromise = new Promise((messageReceived) => {
           socket.on("hello", (receivedMessage) => {
             receivedMessage.should.eql(message);
             messageReceived();
           });
         });
-        connected(() => promise);
+        connected(() => messageReceivedPromise);
       })
       .on("connect", () => socket.emit("authenticate", VALID_TOKEN));
-  }).then((promise) =>
+  }).then((messageReceivedPromise) =>
     request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${SERVER2_PORT}`)
       .post("/messages")
       .send(message)
       .expect(204) // eslint-disable-line no-magic-numbers
-      .then(promise)
+      .then(messageReceivedPromise)
   ));
 
   it("should resolve audience on the same instance", () => new Promise((connected, reject) => {
@@ -178,21 +178,21 @@ describe("MiddlewareServer with Redis", () => {
       .on("alert", (alert) => reject(`Unexpected alert: ${alert}`))
       .on("error", (error) => reject(`Unexpected error: ${error}`))
       .on("welcome", () => {
-        const promise = new Promise((messageReceived) => {
+        const messageReceivedPromise = new Promise((messageReceived) => {
           socket.on("hello", (receivedMessage) => {
             receivedMessage.should.eql(message);
             messageReceived();
           });
         });
-        connected(() => promise);
+        connected(() => messageReceivedPromise);
       })
       .on("connect", () => socket.emit("authenticate", VALID_TOKEN));
-  }).then((promise) =>
+  }).then((messageReceivedPromise) =>
     request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${SERVER1_PORT}`)
       .post("/messages")
       .send(message)
       .expect(204) // eslint-disable-line no-magic-numbers
-      .then(promise)
+      .then(messageReceivedPromise)
   ));
 
 });
