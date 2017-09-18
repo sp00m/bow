@@ -110,7 +110,7 @@ describe("MiddlewareServer", () => {
       .on("error", (error) => connectionFailed(`Unexpected error: ${error}`))
       .on("welcome", () => {
         const messageReceivedPromise = new Promise((messageReceived) => {
-          firstSocket.on("hello", (receivedMessage) => {
+          firstSocket.on(message.name, (receivedMessage) => {
             receivedMessage.should.eql(message);
             messageReceived();
           });
@@ -132,7 +132,7 @@ describe("MiddlewareServer", () => {
       .on("error", (error) => firstConnectionFailed(`Unexpected error: ${error}`))
       .on("welcome", () => {
         const firstMessageReceivedPromise = new Promise((firstMessageReceived) => {
-          firstSocket.on("hello", (firstReceivedMessage) => {
+          firstSocket.on(message.name, (firstReceivedMessage) => {
             firstReceivedMessage.should.eql(message);
             firstMessageReceived();
           });
@@ -146,7 +146,7 @@ describe("MiddlewareServer", () => {
       .on("error", (error) => secondConnectionFailed(`Unexpected error: ${error}`))
       .on("welcome", () => {
         const secondMessageReceivedPromise = new Promise((secondMessageReceived) => {
-          secondSocket.on("hello", (secondReceivedMessage) => {
+          secondSocket.on(message.name, (secondReceivedMessage) => {
             secondReceivedMessage.should.eql(message);
             secondMessageReceived();
           });
@@ -160,6 +160,113 @@ describe("MiddlewareServer", () => {
       .send(message)
       .expect(204) // eslint-disable-line no-magic-numbers
       .then(messageReceivedPromiseGetter)
+  ));
+
+});
+
+describe("MiddlewareServer with multiple middlewares", () => {
+
+  const SERVER_PORT = 3000;
+
+  const getUserById = async (userId) => {
+    const user = usersById[userId];
+    if (check.not.assigned(user)) {
+      throw new Error(`Invalid user id: '${userId}'`);
+    }
+    return user;
+  };
+
+  const predicates = {
+    role: (user, role) => user.role === role
+  };
+
+  const getMessageFromBody = async (payload) => ({
+    name: payload.name,
+    payload,
+    audience: payload.audience
+  });
+
+  const getUserIdByToken = async (token) => {
+    const userId = userIdsByToken[token];
+    if (check.not.assigned(userId)) {
+      throw new Error(`Invalid token: '${token}'`);
+    }
+    return userId;
+  };
+
+  let stopServer = undefined;
+  let firstSocket = undefined;
+  let secondSocket = undefined;
+
+  before(async () => {
+    const serverConfig = clone(config);
+    serverConfig.port = SERVER_PORT;
+    stopServer = await new Bow(serverConfig)
+      .middleware("v1", getUserById, predicates)
+      .middleware("v2", getUserById, predicates)
+      .inbound("/v1/messages", getMessageFromBody, "v1")
+      .inbound("/v2/messages", getMessageFromBody, "v2")
+      .outbound("v1", getUserIdByToken, "v1")
+      .outbound("v2", getUserIdByToken, "v2")
+      .start();
+  });
+
+  afterEach(() => {
+    if (check.assigned(firstSocket)) {
+      firstSocket.disconnect();
+      firstSocket = undefined;
+    }
+  });
+
+  afterEach(() => {
+    if (check.assigned(secondSocket)) {
+      secondSocket.disconnect();
+      secondSocket = undefined;
+    }
+  });
+
+  after(async () => {
+    if (check.assigned(stopServer)) {
+      await stopServer();
+      stopServer = undefined;
+    }
+  });
+
+  it("should resolve audience", () => new Promise((firstConnectionSucceeded, firstConnectionFailed) => {
+    firstSocket = io(`http://localhost:${SERVER_PORT}`, { forceNew: true, query: { v: 1 } })
+      .on("alert", (alert) => firstConnectionFailed(`Unexpected alert: ${alert}`))
+      .on("error", (error) => firstConnectionFailed(`Unexpected error: ${error}`))
+      .on("welcome", () => {
+        const messageReceivedPromise = new Promise((messageReceived) => {
+          firstSocket.on(message.name, (firstReceivedMessage) => {
+            firstReceivedMessage.should.eql(message);
+            messageReceived();
+          });
+        });
+        firstConnectionSucceeded(() => messageReceivedPromise);
+      })
+      .on("connect", () => firstSocket.emit("authenticate", VALID_TOKEN));
+  }).then((messageReceivedPromiseGetter) => new Promise((secondConnectionSucceeded, secondConnectionFailed) => {
+    secondSocket = io(`http://localhost:${SERVER_PORT}`, { forceNew: true, query: { v: 2 } })
+      .on("alert", (alert) => secondConnectionFailed(`Unexpected alert: ${alert}`))
+      .on("error", (error) => secondConnectionFailed(`Unexpected error: ${error}`))
+      .on("welcome", () => {
+        const messageNotReceivedPromise = new Promise((messageNotReceived, messageReceived) => {
+          const timeout = setTimeout(messageNotReceived, 1000); // eslint-disable-line no-magic-numbers
+          secondSocket.on(message.name, () => {
+            clearTimeout(timeout);
+            messageReceived("Message has been received");
+          });
+        });
+        secondConnectionSucceeded(() => Promise.all([messageReceivedPromiseGetter(), messageNotReceivedPromise]));
+      })
+      .on("connect", () => secondSocket.emit("authenticate", VALID_TOKEN));
+  })).then((allMessagesReceivedPromiseGetter) =>
+    request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${SERVER_PORT}`)
+      .post("/v1/messages")
+      .send(message)
+      .expect(204) // eslint-disable-line no-magic-numbers
+      .then(allMessagesReceivedPromiseGetter)
   ));
 
 });
@@ -213,7 +320,7 @@ describe("MiddlewareServer with HTTPS", () => {
       .on("error", (error) => connectionFailed(`Unexpected error: ${error}`))
       .on("welcome", () => {
         const messageReceivedPromise = new Promise((messageReceived) => {
-          firstSocket.on("hello", (receivedMessage) => {
+          firstSocket.on(message.name, (receivedMessage) => {
             receivedMessage.should.eql(message);
             messageReceived();
           });
@@ -272,7 +379,7 @@ describe("MiddlewareServer with Redis", () => {
       .on("error", (error) => connectionFailed(`Unexpected error: ${error}`))
       .on("welcome", () => {
         const messageReceivedPromise = new Promise((messageReceived) => {
-          socket.on("hello", (receivedMessage) => {
+          socket.on(message.name, (receivedMessage) => {
             receivedMessage.should.eql(message);
             messageReceived();
           });
@@ -294,7 +401,7 @@ describe("MiddlewareServer with Redis", () => {
       .on("error", (error) => connectionFailed(`Unexpected error: ${error}`))
       .on("welcome", () => {
         const messageReceivedPromise = new Promise((messageReceived) => {
-          socket.on("hello", (receivedMessage) => {
+          socket.on(message.name, (receivedMessage) => {
             receivedMessage.should.eql(message);
             messageReceived();
           });
