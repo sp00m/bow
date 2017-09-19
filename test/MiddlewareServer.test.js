@@ -170,12 +170,12 @@ describe("MiddlewareServer", () => {
       secondConnectionFailed,
       firstMessageReceivedPromiseGetter
     );
-  })).then((messageReceivedPromiseGetter) =>
+  })).then((allMessagesReceivedPromiseGetter) =>
     request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${SERVER_PORT}`)
       .post("/messages")
       .send(message)
       .expect(204) // eslint-disable-line no-magic-numbers
-      .then(messageReceivedPromiseGetter)
+      .then(allMessagesReceivedPromiseGetter)
   ));
 
 });
