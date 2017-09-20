@@ -46,8 +46,6 @@ const buildServer = (port, options) => {
         throw new Error(`Invalid user id: '${userId}'`);
       }
       return user;
-    }, {
-      role: (user, role) => user.role === role
     })
     .inbound("/messages", async (payload) => ({
       name: payload.name,
@@ -192,10 +190,6 @@ describe("MiddlewareServer with multiple middlewares", () => {
     return user;
   };
 
-  const predicates = {
-    role: (user, role) => user.role === role
-  };
-
   const getMessageFromBody = async (payload) => ({
     name: payload.name,
     payload,
@@ -218,8 +212,8 @@ describe("MiddlewareServer with multiple middlewares", () => {
     const serverConfig = clone(config);
     serverConfig.port = SERVER_PORT;
     stopServer = await new Bow(serverConfig)
-      .middleware("v1", getUserById, predicates)
-      .middleware("v2", getUserById, predicates)
+      .middleware("v1", getUserById)
+      .middleware("v2", getUserById)
       .inbound("/v1/messages", getMessageFromBody, "v1")
       .inbound("/v2/messages", getMessageFromBody, "v2")
       .outbound("v1", getUserIdByToken, "v1")

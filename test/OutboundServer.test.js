@@ -25,7 +25,7 @@ describe("OutboundServer", () => {
 
   before(async () => {
     stopServer = await new Bow(config)
-      .middleware("v1", () => {}, {}) // eslint-disable-line no-empty-function
+      .middleware("v1", () => {}) // eslint-disable-line no-empty-function
       .inbound("/v1", () => {}, "v1") // eslint-disable-line no-empty-function
       .outbound("v1", async (token) => {
         throw new Error(`Invalid token: '${token}'`);

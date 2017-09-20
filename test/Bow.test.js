@@ -39,7 +39,7 @@ const checkState = async (message, bowDecorator) => {
 };
 
 const createValidMiddleware = (version) =>
-  [version, () => {}, {}]; // eslint-disable-line no-empty-function
+  [version, () => {}]; // eslint-disable-line no-empty-function
 const createValidInbound = (version) =>
   [version, () => {}, version]; // eslint-disable-line no-empty-function
 const createValidOutbound = (version) =>
@@ -165,10 +165,6 @@ describe("Bow middleware", () => {
   it("should fail if getUserById is not a function", async () =>
     checkState("Expected middleware's getUserById to be a function", (bow) => bow
       .middleware("v1")));
-
-  it("should fail if predicates is not an object", async () =>
-    checkState("Expected middleware's predicates to be an object", (bow) => bow
-      .middleware("v1", () => {}))); // eslint-disable-line no-empty-function
 
   it("should fail if none is registered", async () =>
     checkState("No middleware has been registered"));
