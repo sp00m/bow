@@ -1,3 +1,5 @@
+/* eslint-disable max-lines */
+
 require("should");
 
 const check = require("check-types");
@@ -8,15 +10,24 @@ const request = require("supertest");
 
 const Bow = require("../");
 
-const VALID_TOKEN = "VALID_TOKEN";
-const VALID_USER_ID = 42;
+const ADMIN1_TOKEN = "ADMIN1_TOKEN";
+const AUTHOR1_TOKEN = "AUTHOR1_TOKEN";
+const AUTHOR2_TOKEN = "AUTHOR2_TOKEN";
+
+const ADMIN1_ID = 1;
+const AUTHOR1_ID = 2;
+const AUTHOR2_ID = 3;
 
 const userIdsByToken = {
-  [VALID_TOKEN]: VALID_USER_ID
+  [ADMIN1_TOKEN]: ADMIN1_ID,
+  [AUTHOR1_TOKEN]: AUTHOR1_ID,
+  [AUTHOR2_TOKEN]: AUTHOR2_ID
 };
 
 const usersById = {
-  [VALID_USER_ID]: { role: "admin" }
+  [ADMIN1_ID]: { role: "admin" },
+  [AUTHOR1_ID]: { role: "author", blogId: 1 },
+  [AUTHOR2_ID]: { role: "author", blogId: 2 }
 };
 
 const config = {
@@ -61,7 +72,7 @@ const buildServer = (port, options) => {
     }, "v1");
 };
 
-const message = {
+const simpleMessage = {
   name: "hello",
   foo: "bar",
   audience: [
@@ -69,17 +80,17 @@ const message = {
   ]
 };
 
-const createSocket = (url, v, connectionFailed, buildOnWelcome) => {
+const createSocket = (url, v, token, connectionFailed, buildOnWelcome) => {
   const socket = io(url, { rejectUnauthorized: false, forceNew: true, query: { v } });
   return socket
     .on("alert", (alert) => connectionFailed(`Unexpected alert: ${alert}`))
     .on("error", (error) => connectionFailed(`Unexpected error: ${error}`))
     .on("welcome", buildOnWelcome(socket))
-    .on("connect", () => socket.emit("authenticate", VALID_TOKEN));
+    .on("connect", () => socket.emit("authenticate", token));
 };
 
-const createSocketExpectingMessage = (url, v, connectionSucceeded, connectionFailed, ...pendingPromiseGetters) =>
-  createSocket(url, v, connectionFailed, (socket) => () => {
+const createSocketExpectingMessage = (url, v, token, message, connectionSucceeded, connectionFailed, ...pendingPromiseGetters) =>
+  createSocket(url, v, token, connectionFailed, (socket) => () => {
     const messageReceivedPromise = new Promise((messageReceived) => {
       socket.on(message.name, (receivedMessage) => {
         receivedMessage.should.eql(message);
@@ -91,8 +102,8 @@ const createSocketExpectingMessage = (url, v, connectionSucceeded, connectionFai
       .concat(messageReceivedPromise)));
   });
 
-const createSocketNotExpectingMessage = (url, v, connectionSucceeded, connectionFailed, ...pendingPromiseGetters) =>
-  createSocket(url, v, connectionFailed, (socket) => () => {
+const createSocketNotExpectingMessage = (url, v, token, message, connectionSucceeded, connectionFailed, ...pendingPromiseGetters) =>
+  createSocket(url, v, token, connectionFailed, (socket) => () => {
     const messageNotReceivedPromise = new Promise((messageNotReceived, messageReceived) => {
       const timeout = setTimeout(messageNotReceived, 1000); // eslint-disable-line no-magic-numbers
       socket.on(message.name, () => {
@@ -104,6 +115,13 @@ const createSocketNotExpectingMessage = (url, v, connectionSucceeded, connection
       .map((pendingPromiseGetter) => pendingPromiseGetter())
       .concat(messageNotReceivedPromise)));
   });
+
+const pushMessage = (protocol, port, path, message, resolver) =>
+  request(`${protocol}://${config.inbound.username}:${config.inbound.password}@localhost:${port}`)
+    .post(path)
+    .send(message)
+    .expect(204) // eslint-disable-line no-magic-numbers
+    .then(resolver);
 
 describe("MiddlewareServer", () => {
 
@@ -138,43 +156,39 @@ describe("MiddlewareServer", () => {
     }
   });
 
-  it("should resolve audience", () => new Promise((connectionSucceeded, connectionFailed) => {
+  it("should resolve simple audience", () => new Promise((connectionSucceeded, connectionFailed) => {
     firstSocket = createSocketExpectingMessage(
       `http://localhost:${SERVER_PORT}`,
       1,
+      ADMIN1_TOKEN,
+      simpleMessage,
       connectionSucceeded,
       connectionFailed
     );
   }).then((messageReceivedPromiseGetter) =>
-    request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${SERVER_PORT}`)
-      .post("/messages")
-      .send(message)
-      .expect(204) // eslint-disable-line no-magic-numbers
-      .then(messageReceivedPromiseGetter)
-  ));
+    pushMessage("http", SERVER_PORT, "/messages", simpleMessage, messageReceivedPromiseGetter)));
 
   it("should handle same user connected multiple times", () => new Promise((firstConnectionSucceeded, firstConnectionFailed) => {
     firstSocket = createSocketExpectingMessage(
       `http://localhost:${SERVER_PORT}`,
       1,
+      ADMIN1_TOKEN,
+      simpleMessage,
       firstConnectionSucceeded,
       firstConnectionFailed
     );
-  }).then((firstMessageReceivedPromiseGetter) => new Promise((secondConnectionSucceeded, secondConnectionFailed) => {
+  }).then((messageReceivedPromiseGetter) => new Promise((secondConnectionSucceeded, secondConnectionFailed) => {
     secondSocket = createSocketExpectingMessage(
       `http://localhost:${SERVER_PORT}`,
       1,
+      ADMIN1_TOKEN,
+      simpleMessage,
       secondConnectionSucceeded,
       secondConnectionFailed,
-      firstMessageReceivedPromiseGetter
+      messageReceivedPromiseGetter
     );
-  })).then((allMessagesReceivedPromiseGetter) =>
-    request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${SERVER_PORT}`)
-      .post("/messages")
-      .send(message)
-      .expect(204) // eslint-disable-line no-magic-numbers
-      .then(allMessagesReceivedPromiseGetter)
-  ));
+  })).then((messageReceivedPromiseGetter) =>
+    pushMessage("http", SERVER_PORT, "/messages", simpleMessage, messageReceivedPromiseGetter)));
 
 });
 
@@ -246,6 +260,8 @@ describe("MiddlewareServer with multiple middlewares", () => {
     firstSocket = createSocketExpectingMessage(
       `http://localhost:${SERVER_PORT}`,
       1,
+      ADMIN1_TOKEN,
+      simpleMessage,
       firstConnectionSucceeded,
       firstConnectionFailed
     );
@@ -253,17 +269,14 @@ describe("MiddlewareServer with multiple middlewares", () => {
     secondSocket = createSocketNotExpectingMessage(
       `http://localhost:${SERVER_PORT}`,
       2,
+      ADMIN1_TOKEN,
+      simpleMessage,
       secondConnectionSucceeded,
       secondConnectionFailed,
       messageReceivedPromiseGetter
     );
-  })).then((allMessagesReceivedPromiseGetter) =>
-    request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${SERVER_PORT}`)
-      .post("/v1/messages")
-      .send(message)
-      .expect(204) // eslint-disable-line no-magic-numbers
-      .then(allMessagesReceivedPromiseGetter)
-  ));
+  })).then((messageReceivedPromiseGetter) =>
+    pushMessage("http", SERVER_PORT, "/v1/messages", simpleMessage, messageReceivedPromiseGetter)));
 
 });
 
@@ -306,16 +319,13 @@ describe("MiddlewareServer with HTTPS", () => {
     socket = createSocketExpectingMessage(
       `https://localhost:${SERVER_PORT}`,
       1,
+      ADMIN1_TOKEN,
+      simpleMessage,
       connectionSucceeded,
       connectionFailed
     );
   }).then((messageReceivedPromiseGetter) =>
-    request(`https://${config.inbound.username}:${config.inbound.password}@localhost:${SERVER_PORT}`)
-      .post("/messages")
-      .send(message)
-      .expect(204) // eslint-disable-line no-magic-numbers
-      .then(messageReceivedPromiseGetter)
-  ));
+    pushMessage("https", SERVER_PORT, "/messages", simpleMessage, messageReceivedPromiseGetter)));
 
 });
 
@@ -358,30 +368,24 @@ describe("MiddlewareServer with Redis", () => {
     socket = createSocketExpectingMessage(
       `http://localhost:${FIRST_SERVER_PORT}`,
       1,
+      ADMIN1_TOKEN,
+      simpleMessage,
       connectionSucceeded,
       connectionFailed
     );
   }).then((messageReceivedPromiseGetter) =>
-    request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${SECOND_SERVER_PORT}`)
-      .post("/messages")
-      .send(message)
-      .expect(204) // eslint-disable-line no-magic-numbers
-      .then(messageReceivedPromiseGetter)
-  ));
+    pushMessage("http", SECOND_SERVER_PORT, "/messages", simpleMessage, messageReceivedPromiseGetter)));
 
   it("should resolve audience on the same instance", () => new Promise((connectionSucceeded, connectionFailed) => {
     socket = createSocketExpectingMessage(
       `http://localhost:${FIRST_SERVER_PORT}`,
       1,
+      ADMIN1_TOKEN,
+      simpleMessage,
       connectionSucceeded,
       connectionFailed
     );
   }).then((messageReceivedPromiseGetter) =>
-    request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${FIRST_SERVER_PORT}`)
-      .post("/messages")
-      .send(message)
-      .expect(204) // eslint-disable-line no-magic-numbers
-      .then(messageReceivedPromiseGetter)
-  ));
+    pushMessage("http", FIRST_SERVER_PORT, "/messages", simpleMessage, messageReceivedPromiseGetter)));
 
 });
