@@ -21,7 +21,7 @@
     "brace-style": ["error", "1tbs"],
     "callback-return": "off",
     "camelcase": "error",
-    "capitalized-comments": ["error", "never", { "ignorePattern": "S?CSS|JS|URL|HTML" }],
+    "capitalized-comments": ["error", "never", { "ignorePattern": "S?CSS|JS|URL|HTML|TODO|FIXME" }],
     "class-methods-use-this": "error",
     "comma-dangle": "error",
     "comma-spacing": ["error", { "after": true, "before": false }],
