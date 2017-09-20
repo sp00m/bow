@@ -33,11 +33,11 @@ const config = {
 const buildServer = (port, options) => {
   const serverConfig = clone(config);
   serverConfig.port = port;
-  if (options.redis) {
-    serverConfig.inbound.redis = {};
-  }
   if (options.https) {
     serverConfig.https = pem;
+  }
+  if (options.redis) {
+    serverConfig.redis = {};
   }
   return new Bow(serverConfig)
     .middleware("v1", async (userId) => {
@@ -114,7 +114,7 @@ describe("MiddlewareServer", () => {
   let secondSocket = undefined;
 
   before(async () => {
-    stopServer = await buildServer(SERVER_PORT, { redis: false, https: false }).start();
+    stopServer = await buildServer(SERVER_PORT, { https: false, redis: false }).start();
   });
 
   afterEach(() => {
@@ -281,7 +281,7 @@ describe("MiddlewareServer with HTTPS", () => {
   });
 
   before(async () => {
-    stopServer = await buildServer(SERVER_PORT, { redis: false, https: true }).start();
+    stopServer = await buildServer(SERVER_PORT, { https: true, redis: false }).start();
   });
 
   afterEach(() => {
@@ -329,8 +329,8 @@ describe("MiddlewareServer with Redis", () => {
   let socket = undefined;
 
   before(async () => {
-    stopFirstServer = await buildServer(FIRST_SERVER_PORT, { redis: true, https: false }).start();
-    stopSecondServer = await buildServer(SECOND_SERVER_PORT, { redis: true, https: false }).start();
+    stopFirstServer = await buildServer(FIRST_SERVER_PORT, { https: false, redis: true }).start();
+    stopSecondServer = await buildServer(SECOND_SERVER_PORT, { https: false, redis: true }).start();
   });
 
   afterEach(() => {

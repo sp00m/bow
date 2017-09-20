@@ -18,11 +18,11 @@ const checkState = async (message, bowDecorator) => {
     const bow = new Bow({
       port: 1,
       https: {},
+      redis: {},
       inbound: {
         realm: "realm",
         username: "username",
-        password: "password",
-        redis: {}
+        password: "password"
       },
       outbound: {
         timeout: 1
@@ -64,10 +64,18 @@ describe("Bow config", () => {
       https: "foobar"
     }));
 
+  it("should fail if config.redis is not an object", () =>
+    checkConfig("config.redis", "an object", {
+      port: 1,
+      https: {},
+      redis: "foobar"
+    }));
+
   it("should fail if config.inbound is not an object", () =>
     checkConfig("config.inbound", "an object", {
       port: 1,
       https: {},
+      redis: {},
       inbound: "foobar"
     }));
 
@@ -75,6 +83,7 @@ describe("Bow config", () => {
     checkConfig("config.inbound.realm", "a non empty string", {
       port: 1,
       https: {},
+      redis: {},
       inbound: {
         realm: ""
       }
@@ -84,6 +93,7 @@ describe("Bow config", () => {
     checkConfig("config.inbound.username", "a non empty string", {
       port: 1,
       https: {},
+      redis: {},
       inbound: {
         realm: "realm",
         username: ""
@@ -94,6 +104,7 @@ describe("Bow config", () => {
     checkConfig("config.inbound.password", "a non empty string", {
       port: 1,
       https: {},
+      redis: {},
       inbound: {
         realm: "realm",
         username: "username",
@@ -101,22 +112,11 @@ describe("Bow config", () => {
       }
     }));
 
-  it("should fail if config.inbound.redis is not an object", () =>
-    checkConfig("config.inbound.redis", "an object", {
-      port: 1,
-      https: {},
-      inbound: {
-        realm: "realm",
-        username: "username",
-        password: "password",
-        redis: ""
-      }
-    }));
-
   it("should fail if config.outbound is not an object", () =>
     checkConfig("config.outbound", "an object", {
       port: 1,
       https: {},
+      redis: {},
       inbound: {
         realm: "realm",
         username: "username",
@@ -130,6 +130,7 @@ describe("Bow config", () => {
     checkConfig("config.outbound.timeout", "an integer", {
       port: 1,
       https: {},
+      redis: {},
       inbound: {
         realm: "realm",
         username: "username",
@@ -143,6 +144,7 @@ describe("Bow config", () => {
     checkConfig("config.outbound.timeout", "positive", {
       port: 1,
       https: {},
+      redis: {},
       inbound: {
         realm: "realm",
         username: "username",

@@ -12,8 +12,7 @@ describe("InboundServer", () => {
     inbound: {
       realm: "Bow",
       username: "johndoe",
-      password: "qwerty",
-      redis: {}
+      password: "qwerty"
     },
     outbound: {
       timeout: 1000
