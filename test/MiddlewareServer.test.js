@@ -182,62 +182,62 @@ describe("MiddlewareServer", () => {
       connectionSucceeded,
       connectionFailed
     );
-  }).then((messageReceivedPromiseGetter) =>
-    pushMessage("http", SERVER_PORT, "/messages", simpleMessage, messageReceivedPromiseGetter)));
+  }).then((messagePromiseGetter) =>
+    pushMessage("http", SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)));
 
-  it("should resolve complex audience", () => new Promise((firstConnectionSucceeded, firstConnectionFailed) => {
+  it("should resolve complex audience", () => new Promise((connectionSucceeded, connectionFailed) => {
     firstSocket = createSocketExpectingMessage(
       `http://localhost:${SERVER_PORT}`,
       1,
       ADMIN1_TOKEN,
       complexMessage,
-      firstConnectionSucceeded,
-      firstConnectionFailed
+      connectionSucceeded,
+      connectionFailed
     );
-  }).then((messageReceivedPromiseGetter) => new Promise((secondConnectionSucceeded, secondConnectionFailed) => {
+  }).then((messagePromiseGetter) => new Promise((connectionSucceeded, connectionFailed) => {
     secondSocket = createSocketExpectingMessage(
       `http://localhost:${SERVER_PORT}`,
       1,
       AUTHOR1_TOKEN,
       complexMessage,
-      secondConnectionSucceeded,
-      secondConnectionFailed,
-      messageReceivedPromiseGetter
+      connectionSucceeded,
+      connectionFailed,
+      messagePromiseGetter
     );
-  })).then((messageReceivedPromiseGetter) => new Promise((thirdConnectionSucceeded, thirdConnectionFailed) => {
+  })).then((messagePromiseGetter) => new Promise((connectionSucceeded, connectionFailed) => {
     thirdSocket = createSocketNotExpectingMessage(
       `http://localhost:${SERVER_PORT}`,
       1,
       AUTHOR2_TOKEN,
       complexMessage,
-      thirdConnectionSucceeded,
-      thirdConnectionFailed,
-      messageReceivedPromiseGetter
+      connectionSucceeded,
+      connectionFailed,
+      messagePromiseGetter
     );
-  })).then((messageReceivedPromiseGetter) =>
-    pushMessage("http", SERVER_PORT, "/messages", complexMessage, messageReceivedPromiseGetter)));
+  })).then((messagePromiseGetter) =>
+    pushMessage("http", SERVER_PORT, "/messages", complexMessage, messagePromiseGetter)));
 
-  it("should handle same user connected multiple times", () => new Promise((firstConnectionSucceeded, firstConnectionFailed) => {
+  it("should handle same user connected multiple times", () => new Promise((connectionSucceeded, connectionFailed) => {
     firstSocket = createSocketExpectingMessage(
       `http://localhost:${SERVER_PORT}`,
       1,
       ADMIN1_TOKEN,
       simpleMessage,
-      firstConnectionSucceeded,
-      firstConnectionFailed
+      connectionSucceeded,
+      connectionFailed
     );
-  }).then((messageReceivedPromiseGetter) => new Promise((secondConnectionSucceeded, secondConnectionFailed) => {
+  }).then((messagePromiseGetter) => new Promise((connectionSucceeded, connectionFailed) => {
     secondSocket = createSocketExpectingMessage(
       `http://localhost:${SERVER_PORT}`,
       1,
       ADMIN1_TOKEN,
       simpleMessage,
-      secondConnectionSucceeded,
-      secondConnectionFailed,
-      messageReceivedPromiseGetter
+      connectionSucceeded,
+      connectionFailed,
+      messagePromiseGetter
     );
-  })).then((messageReceivedPromiseGetter) =>
-    pushMessage("http", SERVER_PORT, "/messages", simpleMessage, messageReceivedPromiseGetter)));
+  })).then((messagePromiseGetter) =>
+    pushMessage("http", SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)));
 
 });
 
@@ -305,27 +305,27 @@ describe("MiddlewareServer with multiple middlewares", () => {
     }
   });
 
-  it("should resolve audience", () => new Promise((firstConnectionSucceeded, firstConnectionFailed) => {
+  it("should resolve audience", () => new Promise((connectionSucceeded, connectionFailed) => {
     firstSocket = createSocketExpectingMessage(
       `http://localhost:${SERVER_PORT}`,
       1,
       ADMIN1_TOKEN,
       simpleMessage,
-      firstConnectionSucceeded,
-      firstConnectionFailed
+      connectionSucceeded,
+      connectionFailed
     );
-  }).then((messageReceivedPromiseGetter) => new Promise((secondConnectionSucceeded, secondConnectionFailed) => {
+  }).then((messagePromiseGetter) => new Promise((connectionSucceeded, connectionFailed) => {
     secondSocket = createSocketNotExpectingMessage(
       `http://localhost:${SERVER_PORT}`,
       2,
       ADMIN1_TOKEN,
       simpleMessage,
-      secondConnectionSucceeded,
-      secondConnectionFailed,
-      messageReceivedPromiseGetter
+      connectionSucceeded,
+      connectionFailed,
+      messagePromiseGetter
     );
-  })).then((messageReceivedPromiseGetter) =>
-    pushMessage("http", SERVER_PORT, "/v1/messages", simpleMessage, messageReceivedPromiseGetter)));
+  })).then((messagePromiseGetter) =>
+    pushMessage("http", SERVER_PORT, "/v1/messages", simpleMessage, messagePromiseGetter)));
 
 });
 
@@ -373,8 +373,8 @@ describe("MiddlewareServer with HTTPS", () => {
       connectionSucceeded,
       connectionFailed
     );
-  }).then((messageReceivedPromiseGetter) =>
-    pushMessage("https", SERVER_PORT, "/messages", simpleMessage, messageReceivedPromiseGetter)));
+  }).then((messagePromiseGetter) =>
+    pushMessage("https", SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)));
 
 });
 
@@ -385,7 +385,8 @@ describe("MiddlewareServer with Redis", () => {
 
   let stopFirstServer = undefined;
   let stopSecondServer = undefined;
-  let socket = undefined;
+  let firstSocket = undefined;
+  let secondSocket = undefined;
 
   before(async () => {
     stopFirstServer = await buildServer(FIRST_SERVER_PORT, { https: false, redis: true }).start();
@@ -393,9 +394,16 @@ describe("MiddlewareServer with Redis", () => {
   });
 
   afterEach(() => {
-    if (check.assigned(socket)) {
-      socket.disconnect();
-      socket = undefined;
+    if (check.assigned(firstSocket)) {
+      firstSocket.disconnect();
+      firstSocket = undefined;
+    }
+  });
+
+  afterEach(() => {
+    if (check.assigned(secondSocket)) {
+      secondSocket.disconnect();
+      secondSocket = undefined;
     }
   });
 
@@ -414,7 +422,7 @@ describe("MiddlewareServer with Redis", () => {
   });
 
   it("should resolve audience on distinct instances", () => new Promise((connectionSucceeded, connectionFailed) => {
-    socket = createSocketExpectingMessage(
+    firstSocket = createSocketExpectingMessage(
       `http://localhost:${FIRST_SERVER_PORT}`,
       1,
       ADMIN1_TOKEN,
@@ -422,11 +430,11 @@ describe("MiddlewareServer with Redis", () => {
       connectionSucceeded,
       connectionFailed
     );
-  }).then((messageReceivedPromiseGetter) =>
-    pushMessage("http", SECOND_SERVER_PORT, "/messages", simpleMessage, messageReceivedPromiseGetter)));
+  }).then((messagePromiseGetter) =>
+    pushMessage("http", SECOND_SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)));
 
   it("should resolve audience on the same instance", () => new Promise((connectionSucceeded, connectionFailed) => {
-    socket = createSocketExpectingMessage(
+    firstSocket = createSocketExpectingMessage(
       `http://localhost:${FIRST_SERVER_PORT}`,
       1,
       ADMIN1_TOKEN,
@@ -434,7 +442,7 @@ describe("MiddlewareServer with Redis", () => {
       connectionSucceeded,
       connectionFailed
     );
-  }).then((messageReceivedPromiseGetter) =>
-    pushMessage("http", FIRST_SERVER_PORT, "/messages", simpleMessage, messageReceivedPromiseGetter)));
+  }).then((messagePromiseGetter) =>
+    pushMessage("http", FIRST_SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)));
 
 });
