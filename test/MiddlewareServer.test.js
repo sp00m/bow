@@ -52,7 +52,7 @@ const buildServer = (port, options) => {
   }
   return new Bow(serverConfig)
     .middleware("v1", async (userId) => {
-      const user = usersById[userId];
+      const user = clone(usersById[userId]);
       if (check.not.assigned(user)) {
         throw new Error(`Invalid user id: '${userId}'`);
       }
@@ -443,6 +443,31 @@ describe("MiddlewareServer with Redis", () => {
       connectionFailed
     );
   }).then((messagePromiseGetter) =>
+    pushMessage("http", FIRST_SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)));
+
+  it("should share user criteria between instances", () => new Promise((connectionSucceeded, connectionFailed) => {
+    firstSocket = createSocketNotExpectingMessage(
+      `http://localhost:${FIRST_SERVER_PORT}`,
+      1,
+      ADMIN1_TOKEN,
+      simpleMessage,
+      connectionSucceeded,
+      connectionFailed
+    );
+  }).then((messagePromiseGetter) => new Promise((connectionSucceeded, connectionFailed) => {
+    usersById[ADMIN1_ID].role = "author";
+    secondSocket = createSocketNotExpectingMessage(
+      `http://localhost:${SECOND_SERVER_PORT}`,
+      1,
+      ADMIN1_TOKEN,
+      simpleMessage,
+      connectionSucceeded,
+      connectionFailed,
+      messagePromiseGetter
+    );
+  })).then((messagePromiseGetter) => new Promise((resolve) => {
+    setTimeout(() => resolve(messagePromiseGetter), 500); // eslint-disable-line no-magic-numbers
+  })).then((messagePromiseGetter) =>
     pushMessage("http", FIRST_SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)));
 
 });
