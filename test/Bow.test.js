@@ -164,8 +164,8 @@ describe("Bow middleware", () => {
     checkState("Expected middleware's version to be a non empty string", (bow) => bow
       .middleware()));
 
-  it("should fail if getUserCriteriaById is not a function", async () =>
-    checkState("Expected middleware's getUserCriteriaById to be a function", (bow) => bow
+  it("should fail if getUserCriteriaByUserId is not a function", async () =>
+    checkState("Expected middleware's getUserCriteriaByUserId to be a function", (bow) => bow
       .middleware("v1")));
 
   it("should fail if none is registered", async () =>

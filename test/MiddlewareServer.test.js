@@ -245,7 +245,7 @@ describe("MiddlewareServer with multiple middlewares", () => {
 
   const SERVER_PORT = 3000;
 
-  const getUserCriteriaById = async (userId) => {
+  const getUserCriteriaByUserId = async (userId) => {
     const user = usersById[userId];
     if (check.not.assigned(user)) {
       throw new Error(`Invalid user id: '${userId}'`);
@@ -275,8 +275,8 @@ describe("MiddlewareServer with multiple middlewares", () => {
     const serverConfig = clone(config);
     serverConfig.port = SERVER_PORT;
     stopServer = await new Bow(serverConfig)
-      .middleware("v1", getUserCriteriaById)
-      .middleware("v2", getUserCriteriaById)
+      .middleware("v1", getUserCriteriaByUserId)
+      .middleware("v2", getUserCriteriaByUserId)
       .inbound("/v1/messages", getMessageFromBody, "v1")
       .inbound("/v2/messages", getMessageFromBody, "v2")
       .outbound("v1", getUserIdByToken, "v1")
