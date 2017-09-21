@@ -80,6 +80,15 @@ const simpleMessage = {
   ]
 };
 
+const complexMessage = {
+  name: "hello",
+  foo: "bar",
+  audience: [
+    { role: "admin" },
+    { role: "author", blogId: 1 }
+  ]
+};
+
 const createSocket = (url, v, token, connectionFailed, buildOnWelcome) => {
   const socket = io(url, { rejectUnauthorized: false, forceNew: true, query: { v } });
   return socket
@@ -130,6 +139,7 @@ describe("MiddlewareServer", () => {
   let stopServer = undefined;
   let firstSocket = undefined;
   let secondSocket = undefined;
+  let thirdSocket = undefined;
 
   before(async () => {
     stopServer = await buildServer(SERVER_PORT, { https: false, redis: false }).start();
@@ -146,6 +156,13 @@ describe("MiddlewareServer", () => {
     if (check.assigned(secondSocket)) {
       secondSocket.disconnect();
       secondSocket = undefined;
+    }
+  });
+
+  afterEach(() => {
+    if (check.assigned(thirdSocket)) {
+      thirdSocket.disconnect();
+      thirdSocket = undefined;
     }
   });
 
@@ -167,6 +184,38 @@ describe("MiddlewareServer", () => {
     );
   }).then((messageReceivedPromiseGetter) =>
     pushMessage("http", SERVER_PORT, "/messages", simpleMessage, messageReceivedPromiseGetter)));
+
+  it("should resolve complex audience", () => new Promise((firstConnectionSucceeded, firstConnectionFailed) => {
+    firstSocket = createSocketExpectingMessage(
+      `http://localhost:${SERVER_PORT}`,
+      1,
+      ADMIN1_TOKEN,
+      complexMessage,
+      firstConnectionSucceeded,
+      firstConnectionFailed
+    );
+  }).then((messageReceivedPromiseGetter) => new Promise((secondConnectionSucceeded, secondConnectionFailed) => {
+    secondSocket = createSocketExpectingMessage(
+      `http://localhost:${SERVER_PORT}`,
+      1,
+      AUTHOR1_TOKEN,
+      complexMessage,
+      secondConnectionSucceeded,
+      secondConnectionFailed,
+      messageReceivedPromiseGetter
+    );
+  })).then((messageReceivedPromiseGetter) => new Promise((thirdConnectionSucceeded, thirdConnectionFailed) => {
+    thirdSocket = createSocketNotExpectingMessage(
+      `http://localhost:${SERVER_PORT}`,
+      1,
+      AUTHOR2_TOKEN,
+      complexMessage,
+      thirdConnectionSucceeded,
+      thirdConnectionFailed,
+      messageReceivedPromiseGetter
+    );
+  })).then((messageReceivedPromiseGetter) =>
+    pushMessage("http", SERVER_PORT, "/messages", complexMessage, messageReceivedPromiseGetter)));
 
   it("should handle same user connected multiple times", () => new Promise((firstConnectionSucceeded, firstConnectionFailed) => {
     firstSocket = createSocketExpectingMessage(
