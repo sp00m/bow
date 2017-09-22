@@ -163,16 +163,7 @@ describe("MiddlewareServer", () => {
     serverStoppers.length = 0;
   });
 
-  it("should resolve simple audience", () => new Promise((connectionSucceeded, connectionFailed) => {
-    sockets.push(createSocketExpectingMessage(
-      "http", SERVER_PORT, 1, ADMIN1_TOKEN, simpleMessage,
-      connectionSucceeded, connectionFailed
-    ));
-  }).then((messagePromiseGetter) =>
-    pushMessage("http", SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)
-  ));
-
-  it("should resolve complex audience", () => new Promise((connectionSucceeded, connectionFailed) => {
+  it("should resolve audience", () => new Promise((connectionSucceeded, connectionFailed) => {
     sockets.push(createSocketExpectingMessage(
       "http", SERVER_PORT, 1, ADMIN1_TOKEN, complexMessage,
       connectionSucceeded, connectionFailed
