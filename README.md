@@ -16,7 +16,7 @@ Bow helps you building a multitenant WebSocket server that fits into a microserv
 
 ## Specs
 
-Bow exposes two main APIs:
+Bow exposes two main APIs to third party:
 
 - **an HTTP API to push messages**, built on top of [Koa](http://koajs.com/);
 - and **a WebSocket API to receive messages**, built on top of [Socket.IO](https://socket.io/).
@@ -32,27 +32,93 @@ Bow is built upon these four main concepts:
 
 ### Message
 
-Messages must hold their *audience*, i.e. the tenant they must be dispatched to. An audience is composed by an array of criteria. Criteria are objects, where each property is a criterion.
+Messages must hold their *audience*, i.e. the tenants they must be dispatched to. An audience is composed by *queries*, themselves composed by *predicates*.
 
-For a criteria to be matched, each criterion must be fulfilled (logical `AND`).
+#### Predicate
 
-For an audience to be matched, at least one of its criteria must be matched (logical `OR`).
+A predicate is a key-value pair, where keys are strings and **values only one of the following JSON literals**:
 
-#### Example
+- Boolean (`true` or `false`);
+- Number (e.g. `42` or `3.14159`);
+- String (e.g. `"foobar"`).
+
+#### Query
+
+A query is a conjunction (logical `AND`) of predicates as a JSON object, for example:
+
+```json
+{ "role": "author", "blogId": 42 }
+```
+
+The above query is composed by to predicates: `"role": "author"` and `"blogId": 4`. Such a query will thus select only authors of the blog 42, i.e. both predicates must be fulfilled.
+
+#### Audience
+
+A query is a disjunction (logical `OR`) of queries as a JSON array, for example:
 
 ```json
 [
-  { "role": "admin" },
-  { "role": "author", "blogId": 42 }
+  { "role": "admin" }
+  { "role": "author", "blogId": 42 },
 ]
 ```
 
-For the above audience of a blogging platform for example, the holding message will be sent:
+The above audience is composed by two queries: one selecting admins, and another one selecting authors of the blog 42. The message holding this audience will thus be dispatched to either admins, or authors of the blog 42.
 
-- either to the admins;
-- or to the authors, but for the blog 42 only.
+### Middleware
 
-Note that you will implement the resolution of the value of a criterion thanks to middlewares. This means that you can provide more complex value types if you want (e.g. `"blogIds": [42, 43]`), in which case you'll have to decide and implement whether it should be any of these blog ids, or all of them.
+The purpose of middlewares is to resolve an audience, so that holding message can be dispatched to the right tenants. To do so, a middleware is able, given a user id, to generate _criteria_ defining the user.
+
+#### Criterion
+
+Just like predicates, criteria are key-value pairs, where keys are strings and **values only one of the following JSON literals**:
+
+- Boolean (`true` or `false`);
+- Number (e.g. `42` or `3.14159`);
+- String (e.g. `"foobar"`);
+- Array (e.g. `[42, 418]`), which values must be only one of the following JSON literals:
+  - Boolean (`true` or `false`);
+  - Number (e.g. `42` or `3.14159`);
+  - String (e.g. `"foobar"`).
+
+For example:
+
+```json
+{
+  "role": "author",
+  "blogId": [42, 418]
+}
+```
+
+The above criteria mean that the user is an author of the blogs 42 and 418.
+
+#### Resolution
+
+The resolution will first try to match audiences predicates keys with users criteria keys, then the audiences predicates values with the users criteria values.
+
+For example, given the following user criteria:
+
+```json
+{
+  "role": "author",
+  "blogId": [42, 418]
+}
+```
+
+And the following audience:
+
+```json
+[
+  { "role": "admin" }
+  { "role": "author", "blogId": 42 },
+]
+```
+
+The first query in the audience (`{ "role": "admin" }`) won't match, because user's `role` criterion value is `"author"`.
+
+But the second query in the audience (`{ "role": "author", "blogId": 42 }`) will match, because user's `role` criterion value is `"author"` and they are linked to blog 42.
+
+The message holding this audience will thus be forwarded to the user.
 
 ## Usage
 
@@ -76,6 +142,10 @@ Creates a new `Bow` instance, expected one `config` object argument:
 
 Optional, the `options` object to pass to [Node.js `https.createServer(...)` function](https://nodejs.org/api/https.html#https_https_createserver_options_requestlistener). If this option is not provided, then an [HTTP server will be created](https://nodejs.org/api/http.html#http_http_createserver_requestlistener) instead.
 
+#### config.redis
+
+Optional, the `options` object to pass to [Redis `redis.createClient(...)` function](https://www.npmjs.com/package/redis#rediscreateclient). If this option is not provided, then no message broker will be used, **which makes your server inconsistent if deployed in a clustered environment**.
+
 #### config.inbound.realm
 
 **Required**, the realm for the Basic Auth protecting the HTTP API.
@@ -88,15 +158,11 @@ Optional, the `options` object to pass to [Node.js `https.createServer(...)` fun
 
 **Required**, the password for the Basic Auth protecting the HTTP API.
 
-#### config.inbound.redis
-
-Optional, the `options` object to pass to [Redis `redis.createClient(...)` function](https://www.npmjs.com/package/redis#rediscreateclient). If this option is not provided, then no message broker will be used, **which makes your server inconsistent if deployed in a clustered environment**.
-
 #### config.outbound.timeout
 
 **Required**, the timeout for WebSocket connections to authenticate.
 
-### bow.middleware(version, getUserById, predicates)
+### bow.middleware(version, getUserCriteriaByUserId)
 
 Registers a new middleware.
 
@@ -104,18 +170,9 @@ Registers a new middleware.
 
 The version of this middleware, must be unique between all middlewares.
 
-#### getUserById
+#### getUserCriteriaByUserId
 
-A function that takes one single `userId` argument, and returns a promise resolved with the corresponding user.
-
-#### predicates
-
-An object where keys are predicates names, and values functions taking two arguments:
-
-1. a user, as returned by the provided `getUserById` function;
-2. and a value, as found in the pushed messages for this predicate's name.
-
-These functions must return a boolean, indicating whether the given user fulfills the given value for this predicate or not.
+A function that takes one single `userId` argument, and returns a promise resolved with the corresponding user criteria.
 
 ### bow.inbound(path, getMessageFromBody, middlewareVersion)
 
@@ -165,7 +222,7 @@ Table `user`:
 +----+----------+--------+---------+
 | id |   name   |  role  | blog_id |
 +----+----------+--------+---------+
-|  1 | Admin 1  | admin  |      42 |
+|  1 | Admin 1  | admin  |         |
 |  2 | Author 1 | author |      42 |
 |  3 | Author 2 | author |     418 |
 +----+----------+--------+---------+
@@ -180,7 +237,7 @@ const Bow = require("bow");
  * middleware configuration:
  */
 
-const getUserById = async (id) => {
+const getUserCriteriaByUserId = async (id) => {
   const results = await dbConnection.query("SELECT * FROM user WHERE id = ?", id);
   if (1 === results.length) {
     return {
@@ -190,11 +247,6 @@ const getUserById = async (id) => {
   } else {
     throw new Error(`Expected one result for user id '${id}', but got ${results.length}`);
   }
-};
-
-const predicates = {
-  role: (user, role) => user.role === role,
-  blogId: (user, blogId) => user.blogId === blogId
 };
 
 /*
@@ -225,12 +277,12 @@ const getUserIdFromToken = async (token) => {
 
  const config = {
    port: 443,
-   https: { ... }
+   https: { ... },
+   redis: { ... },
    inbound: {
      realm: "My blogging platform",
      username: "messagepusher",
-     password: "thisisasecret",
-     redis: { ... }
+     password: "thisisasecret"
    },
    outbound: {
      timeout: 5000 // 5 seconds
@@ -238,7 +290,7 @@ const getUserIdFromToken = async (token) => {
  };
 
 const bow = new Bow(config)
-  .middleware("v1.1", getUserById, predicates)
+  .middleware("v1.1", getUserCriteriaByUserId)
   .inbound("/v1.2/messages", getMessageFromBody, "v1.1")
   .outbound("v1.3", getUserIdFromToken, "v1.1");
 
@@ -285,9 +337,9 @@ POST /v1.2/messages
 
 The following users will receive this message:
 
-- Admin 1: `role` is "admin";
-- Author 1: `role` is "author" and `blogId` is 42.
+- Admin 1: `role` is `"admin"`;
+- Author 1: `role` is `"author"` and `blogId` is `42`.
 
 The following users will **not** receive this message:
 
-- Author 2: `role` is "author" but `blogId` is 418.
+- Author 2: `role` is `"author"` but `blogId` is `418`.
