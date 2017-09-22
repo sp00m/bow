@@ -1,5 +1,3 @@
-/* eslint-disable max-lines */
-
 require("should");
 
 const check = require("check-types");
