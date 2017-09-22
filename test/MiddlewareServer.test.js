@@ -97,8 +97,8 @@ const complexMessage = {
   ]
 };
 
-const createSocket = (url, v, token, connectionFailed, buildOnWelcome) => {
-  const socket = io(url, { rejectUnauthorized: false, forceNew: true, query: { v } });
+const createSocket = (protocol, port, v, token, connectionFailed, buildOnWelcome) => {
+  const socket = io(`${protocol}://localhost:${port}`, { rejectUnauthorized: false, forceNew: true, query: { v } });
   return socket
     .on("alert", (alert) => connectionFailed(`Unexpected alert: ${alert}`))
     .on("error", (error) => connectionFailed(`Unexpected error: ${error}`))
@@ -106,8 +106,8 @@ const createSocket = (url, v, token, connectionFailed, buildOnWelcome) => {
     .on("connect", () => socket.emit("authenticate", token));
 };
 
-const createSocketExpectingMessage = (url, v, token, message, connectionSucceeded, connectionFailed, ...pendingPromiseGetters) =>
-  createSocket(url, v, token, connectionFailed, (socket) => () => {
+const createSocketExpectingMessage = (protocol, port, v, token, message, connectionSucceeded, connectionFailed, ...pendingPromiseGetters) =>
+  createSocket(protocol, port, v, token, connectionFailed, (socket) => () => {
     const messageReceivedPromise = new Promise((messageReceived) => {
       socket.on(message.name, (receivedMessage) => {
         receivedMessage.should.eql(message);
@@ -119,8 +119,8 @@ const createSocketExpectingMessage = (url, v, token, message, connectionSucceede
       .concat(messageReceivedPromise)));
   });
 
-const createSocketNotExpectingMessage = (url, v, token, message, connectionSucceeded, connectionFailed, ...pendingPromiseGetters) =>
-  createSocket(url, v, token, connectionFailed, (socket) => () => {
+const createSocketNotExpectingMessage = (protocol, port, v, token, message, connectionSucceeded, connectionFailed, ...pendingPromiseGetters) =>
+  createSocket(protocol, port, v, token, connectionFailed, (socket) => () => {
     const messageNotReceivedPromise = new Promise((messageNotReceived, messageReceived) => {
       const timeout = setTimeout(messageNotReceived, 1000); // eslint-disable-line no-magic-numbers
       socket.on(message.name, () => {
@@ -144,11 +144,11 @@ describe("MiddlewareServer", () => {
 
   const SERVER_PORT = 3000;
 
+  const serverStoppers = [];
   const sockets = [];
-  let stopServer = undefined;
 
   before(async () => {
-    stopServer = await buildServer(SERVER_PORT, { https: false, redis: false }).start();
+    serverStoppers.push(await buildServer(SERVER_PORT, { https: false, redis: false }).start());
   });
 
   afterEach(() => {
@@ -159,97 +159,61 @@ describe("MiddlewareServer", () => {
   });
 
   after(async () => {
-    if (check.assigned(stopServer)) {
-      await stopServer();
-      stopServer = undefined;
-    }
+    await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
+    serverStoppers.length = 0;
   });
 
   it("should resolve simple audience", () => new Promise((connectionSucceeded, connectionFailed) => {
     sockets.push(createSocketExpectingMessage(
-      `http://localhost:${SERVER_PORT}`,
-      1,
-      ADMIN1_TOKEN,
-      simpleMessage,
-      connectionSucceeded,
-      connectionFailed
+      "http", SERVER_PORT, 1, ADMIN1_TOKEN, simpleMessage,
+      connectionSucceeded, connectionFailed
     ));
   }).then((messagePromiseGetter) =>
-    pushMessage("http", SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)));
+    pushMessage("http", SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)
+  ));
 
   it("should resolve complex audience", () => new Promise((connectionSucceeded, connectionFailed) => {
     sockets.push(createSocketExpectingMessage(
-      `http://localhost:${SERVER_PORT}`,
-      1,
-      ADMIN1_TOKEN,
-      complexMessage,
-      connectionSucceeded,
-      connectionFailed
+      "http", SERVER_PORT, 1, ADMIN1_TOKEN, complexMessage,
+      connectionSucceeded, connectionFailed
     ));
   }).then((messagePromiseGetter) => new Promise((connectionSucceeded, connectionFailed) => {
     sockets.push(createSocketExpectingMessage(
-      `http://localhost:${SERVER_PORT}`,
-      1,
-      AUTHOR1_TOKEN,
-      complexMessage,
-      connectionSucceeded,
-      connectionFailed,
-      messagePromiseGetter
+      "http", SERVER_PORT, 1, AUTHOR1_TOKEN, complexMessage,
+      connectionSucceeded, connectionFailed, messagePromiseGetter
     ));
   })).then((messagePromiseGetter) => new Promise((connectionSucceeded, connectionFailed) => {
     sockets.push(createSocketNotExpectingMessage(
-      `http://localhost:${SERVER_PORT}`,
-      1,
-      AUTHOR2_TOKEN,
-      complexMessage,
-      connectionSucceeded,
-      connectionFailed,
-      messagePromiseGetter
+      "http", SERVER_PORT, 1, AUTHOR2_TOKEN, complexMessage,
+      connectionSucceeded, connectionFailed, messagePromiseGetter
     ));
   })).then((messagePromiseGetter) => new Promise((connectionSucceeded, connectionFailed) => {
     sockets.push(createSocketExpectingMessage(
-      `http://localhost:${SERVER_PORT}`,
-      1,
-      AUTHOR3_TOKEN,
-      complexMessage,
-      connectionSucceeded,
-      connectionFailed,
-      messagePromiseGetter
+      "http", SERVER_PORT, 1, AUTHOR3_TOKEN, complexMessage,
+      connectionSucceeded, connectionFailed, messagePromiseGetter
     ));
   })).then((messagePromiseGetter) => new Promise((connectionSucceeded, connectionFailed) => {
     sockets.push(createSocketNotExpectingMessage(
-      `http://localhost:${SERVER_PORT}`,
-      1,
-      AUTHOR4_TOKEN,
-      complexMessage,
-      connectionSucceeded,
-      connectionFailed,
-      messagePromiseGetter
+      "http", SERVER_PORT, 1, AUTHOR4_TOKEN, complexMessage,
+      connectionSucceeded, connectionFailed, messagePromiseGetter
     ));
   })).then((messagePromiseGetter) =>
-    pushMessage("http", SERVER_PORT, "/messages", complexMessage, messagePromiseGetter)));
+    pushMessage("http", SERVER_PORT, "/messages", complexMessage, messagePromiseGetter)
+  ));
 
   it("should handle same user connected multiple times", () => new Promise((connectionSucceeded, connectionFailed) => {
     sockets.push(createSocketExpectingMessage(
-      `http://localhost:${SERVER_PORT}`,
-      1,
-      ADMIN1_TOKEN,
-      simpleMessage,
-      connectionSucceeded,
-      connectionFailed
+      "http", SERVER_PORT, 1, ADMIN1_TOKEN, simpleMessage,
+      connectionSucceeded, connectionFailed
     ));
   }).then((messagePromiseGetter) => new Promise((connectionSucceeded, connectionFailed) => {
     sockets.push(createSocketExpectingMessage(
-      `http://localhost:${SERVER_PORT}`,
-      1,
-      ADMIN1_TOKEN,
-      simpleMessage,
-      connectionSucceeded,
-      connectionFailed,
-      messagePromiseGetter
+      "http", SERVER_PORT, 1, ADMIN1_TOKEN, simpleMessage,
+      connectionSucceeded, connectionFailed, messagePromiseGetter
     ));
   })).then((messagePromiseGetter) =>
-    pushMessage("http", SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)));
+    pushMessage("http", SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)
+  ));
 
 });
 
@@ -279,20 +243,20 @@ describe("MiddlewareServer with multiple middlewares", () => {
     return userId;
   };
 
-  let stopServer = undefined;
+  const serverStoppers = [];
   const sockets = [];
 
   before(async () => {
     const serverConfig = clone(config);
     serverConfig.port = SERVER_PORT;
-    stopServer = await new Bow(serverConfig)
+    serverStoppers.push(await new Bow(serverConfig)
       .middleware("v1", getUserCriteriaByUserId)
       .middleware("v2", getUserCriteriaByUserId)
       .inbound("/v1/messages", getMessageFromBody, "v1")
       .inbound("/v2/messages", getMessageFromBody, "v2")
       .outbound("v1", getUserIdByToken, "v1")
       .outbound("v2", getUserIdByToken, "v2")
-      .start();
+      .start());
   });
 
   afterEach(() => {
@@ -303,33 +267,23 @@ describe("MiddlewareServer with multiple middlewares", () => {
   });
 
   after(async () => {
-    if (check.assigned(stopServer)) {
-      await stopServer();
-      stopServer = undefined;
-    }
+    await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
+    serverStoppers.length = 0;
   });
 
   it("should resolve audience", () => new Promise((connectionSucceeded, connectionFailed) => {
     sockets.push(createSocketExpectingMessage(
-      `http://localhost:${SERVER_PORT}`,
-      1,
-      ADMIN1_TOKEN,
-      simpleMessage,
-      connectionSucceeded,
-      connectionFailed
+      "http", SERVER_PORT, 1, ADMIN1_TOKEN, simpleMessage,
+      connectionSucceeded, connectionFailed
     ));
   }).then((messagePromiseGetter) => new Promise((connectionSucceeded, connectionFailed) => {
     sockets.push(createSocketNotExpectingMessage(
-      `http://localhost:${SERVER_PORT}`,
-      2,
-      ADMIN1_TOKEN,
-      simpleMessage,
-      connectionSucceeded,
-      connectionFailed,
-      messagePromiseGetter
+      "http", SERVER_PORT, 2, ADMIN1_TOKEN, simpleMessage,
+      connectionSucceeded, connectionFailed, messagePromiseGetter
     ));
   })).then((messagePromiseGetter) =>
-    pushMessage("http", SERVER_PORT, "/v1/messages", simpleMessage, messagePromiseGetter)));
+    pushMessage("http", SERVER_PORT, "/v1/messages", simpleMessage, messagePromiseGetter)
+  ));
 
 });
 
@@ -338,7 +292,7 @@ describe("MiddlewareServer with HTTPS", () => {
   const SERVER_PORT = 3000;
 
   let NODE_TLS_REJECT_UNAUTHORIZED = undefined;
-  let stopServer = undefined;
+  const serverStoppers = [];
   const sockets = [];
 
   before(() => {
@@ -347,7 +301,7 @@ describe("MiddlewareServer with HTTPS", () => {
   });
 
   before(async () => {
-    stopServer = await buildServer(SERVER_PORT, { https: true, redis: false }).start();
+    serverStoppers.push(await buildServer(SERVER_PORT, { https: true, redis: false }).start());
   });
 
   afterEach(() => {
@@ -358,10 +312,8 @@ describe("MiddlewareServer with HTTPS", () => {
   });
 
   after(async () => {
-    if (check.assigned(stopServer)) {
-      await stopServer();
-      stopServer = undefined;
-    }
+    await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
+    serverStoppers.length = 0;
   });
 
   after(() => {
@@ -370,15 +322,12 @@ describe("MiddlewareServer with HTTPS", () => {
 
   it("should resolve audience", () => new Promise((connectionSucceeded, connectionFailed) => {
     sockets.push(createSocketExpectingMessage(
-      `https://localhost:${SERVER_PORT}`,
-      1,
-      ADMIN1_TOKEN,
-      simpleMessage,
-      connectionSucceeded,
-      connectionFailed
+      "https", SERVER_PORT, 1, ADMIN1_TOKEN, simpleMessage,
+      connectionSucceeded, connectionFailed
     ));
   }).then((messagePromiseGetter) =>
-    pushMessage("https", SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)));
+    pushMessage("https", SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)
+  ));
 
 });
 
@@ -387,13 +336,13 @@ describe("MiddlewareServer with Redis", () => {
   const FIRST_SERVER_PORT = 3000;
   const SECOND_SERVER_PORT = 3001;
 
-  let stopFirstServer = undefined;
-  let stopSecondServer = undefined;
+  const serverStoppers = [];
   const sockets = [];
+  const reverters = [];
 
   before(async () => {
-    stopFirstServer = await buildServer(FIRST_SERVER_PORT, { https: false, redis: true }).start();
-    stopSecondServer = await buildServer(SECOND_SERVER_PORT, { https: false, redis: true }).start();
+    serverStoppers.push(await buildServer(FIRST_SERVER_PORT, { https: false, redis: true }).start());
+    serverStoppers.push(await buildServer(SECOND_SERVER_PORT, { https: false, redis: true }).start());
   });
 
   afterEach(() => {
@@ -403,67 +352,52 @@ describe("MiddlewareServer with Redis", () => {
     sockets.length = 0;
   });
 
-  after(async () => {
-    if (check.assigned(stopFirstServer)) {
-      await stopFirstServer();
-      stopFirstServer = undefined;
-    }
+  afterEach(() => {
+    reverters.forEach((reverter) => reverter());
+    reverters.length = 0;
   });
 
   after(async () => {
-    if (check.assigned(stopSecondServer)) {
-      await stopSecondServer();
-      stopSecondServer = undefined;
-    }
+    await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
+    serverStoppers.length = 0;
   });
 
   it("should resolve audience on distinct instances", () => new Promise((connectionSucceeded, connectionFailed) => {
     sockets.push(createSocketExpectingMessage(
-      `http://localhost:${FIRST_SERVER_PORT}`,
-      1,
-      ADMIN1_TOKEN,
-      simpleMessage,
-      connectionSucceeded,
-      connectionFailed
+      "http", FIRST_SERVER_PORT, 1, ADMIN1_TOKEN, simpleMessage,
+      connectionSucceeded, connectionFailed
     ));
   }).then((messagePromiseGetter) =>
-    pushMessage("http", SECOND_SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)));
+    pushMessage("http", SECOND_SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)
+  ));
 
   it("should resolve audience on the same instance", () => new Promise((connectionSucceeded, connectionFailed) => {
     sockets.push(createSocketExpectingMessage(
-      `http://localhost:${FIRST_SERVER_PORT}`,
-      1,
-      ADMIN1_TOKEN,
-      simpleMessage,
-      connectionSucceeded,
-      connectionFailed
+      "http", FIRST_SERVER_PORT, 1, ADMIN1_TOKEN, simpleMessage,
+      connectionSucceeded, connectionFailed
     ));
   }).then((messagePromiseGetter) =>
-    pushMessage("http", FIRST_SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)));
+    pushMessage("http", FIRST_SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)
+  ));
 
   it("should share user criteria between instances", () => new Promise((connectionSucceeded, connectionFailed) => {
     sockets.push(createSocketNotExpectingMessage(
-      `http://localhost:${FIRST_SERVER_PORT}`,
-      1,
-      ADMIN1_TOKEN,
-      simpleMessage,
-      connectionSucceeded,
-      connectionFailed
+      "http", FIRST_SERVER_PORT, 1, ADMIN1_TOKEN, simpleMessage,
+      connectionSucceeded, connectionFailed
     ));
   }).then((messagePromiseGetter) => new Promise((connectionSucceeded, connectionFailed) => {
     usersById[ADMIN1_ID].role = "author";
+    reverters.push(() => {
+      usersById[ADMIN1_ID].role = "admin";
+    });
     sockets.push(createSocketNotExpectingMessage(
-      `http://localhost:${SECOND_SERVER_PORT}`,
-      1,
-      ADMIN1_TOKEN,
-      simpleMessage,
-      connectionSucceeded,
-      connectionFailed,
-      messagePromiseGetter
+      "http", SECOND_SERVER_PORT, 1, ADMIN1_TOKEN, simpleMessage,
+      connectionSucceeded, connectionFailed, messagePromiseGetter
     ));
   })).then((messagePromiseGetter) => new Promise((resolve) => {
     setTimeout(() => resolve(messagePromiseGetter), 500); // eslint-disable-line no-magic-numbers
   })).then((messagePromiseGetter) =>
-    pushMessage("http", FIRST_SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)));
+    pushMessage("http", FIRST_SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)
+  ));
 
 });
