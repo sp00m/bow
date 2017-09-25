@@ -2,16 +2,20 @@
   "name": "bow",
   "version": "1.0.0",
   "description": "Broadcast Over WebSocket",
-  "engines": [
-    {
-      "node": ">=7.6.0"
-    }
-  ],
   "keywords": [
     "bow",
     "websocket",
     "microservice",
     "redis"
+  ],
+  "engines": [
+    {
+      "node": ">=7.6.0"
+    }
+  ],
+  "main": "index",
+  "files": [
+    "lib/"
   ],
   "author": "sp00m <christophe.maillard@rocketmail.com>",
   "license": "MIT",
