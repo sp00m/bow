@@ -111,7 +111,7 @@ describe("OutboundServer", () => {
             reject(`Unexpected alert: ${alert}`);
           }
         });
-        socket.emit("authenticate", INVALID_TOKEN);
+        socket.emit("authenticate", INVALID_TOKEN, () => reject("Authentication callback should not have been executed"));
       });
   }));
 

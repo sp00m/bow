@@ -95,17 +95,16 @@ const complexMessage = {
   ]
 };
 
-const createSocket = (protocol, port, v, token, connectionFailed, buildOnWelcome) => {
+const createSocket = (protocol, port, v, token, connectionFailed, onceAuthenticated) => {
   const socket = io(`${protocol}://localhost:${port}`, { rejectUnauthorized: false, forceNew: true, query: { v } });
   return socket
     .on("alert", (alert) => connectionFailed(`Unexpected alert: ${alert}`))
     .on("error", (error) => connectionFailed(`Unexpected error: ${error}`))
-    .on("welcome", buildOnWelcome(socket))
-    .on("connect", () => socket.emit("authenticate", token));
+    .on("connect", () => socket.emit("authenticate", token, () => onceAuthenticated(socket)));
 };
 
 const createSocketExpectingMessage = (protocol, port, v, token, message, connectionSucceeded, connectionFailed, ...pendingPromiseGetters) =>
-  createSocket(protocol, port, v, token, connectionFailed, (socket) => () => {
+  createSocket(protocol, port, v, token, connectionFailed, (socket) => {
     const messageReceivedPromise = new Promise((messageReceived) => {
       socket.on(message.name, (receivedMessage) => {
         receivedMessage.should.eql(message);
@@ -118,7 +117,7 @@ const createSocketExpectingMessage = (protocol, port, v, token, message, connect
   });
 
 const createSocketNotExpectingMessage = (protocol, port, v, token, message, connectionSucceeded, connectionFailed, ...pendingPromiseGetters) =>
-  createSocket(protocol, port, v, token, connectionFailed, (socket) => () => {
+  createSocket(protocol, port, v, token, connectionFailed, (socket) => {
     const messageNotReceivedPromise = new Promise((messageNotReceived, messageReceived) => {
       const timeout = setTimeout(messageNotReceived, 1000); // eslint-disable-line no-magic-numbers
       socket.on(message.name, () => {

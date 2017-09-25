@@ -304,19 +304,28 @@ bow.start().then(() => {
 ```js
 const io = require("socket.io-client");
 
-AuthApi.askForToken().then((token) => {
-  const socket = io(url, { query: { v: "v1.3" } })
-    .on("welcome", () => {
-      console.log("Authenticated!");
-    })
-    .on("NEW_ARTICLE", (article) => {
-      ArticleService.gatherArticle(article);
-    })
+const connectToBow = (version, token) => new Promise((resolve, reject) => {
+  const socket = io(url, { query: { v: version } })
+    .on("alert", reject)
     .on("connect", () => {
       console.log("Connected!");
-      socket.emit("authenticate", token);
+      socket.emit("authenticate", token, () => {
+        console.log("Authenticated!");
+        resolve(socket);
+      });
     });
 });
+
+AuthApi.askForBowToken()
+  .then((token) => connectToBow("v1.3", token))
+  .then((socket) => {
+    socket.on("NEW_ARTICLE", (article) => {
+      ArticleService.gatherArticle(article);
+    });
+  })
+  .catch((error) => {
+    console.error("Could not connect to Bow", error);
+  });
 ```
 
 ### Push new message
