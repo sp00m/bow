@@ -54,7 +54,7 @@ describe("InboundServer", () => {
   it("should fail if auth is wrong", () =>
     request(`http://foo:bar@localhost:${config.port}`)
       .post("/v1/messages")
-      .expect(403)); // eslint-disable-line no-magic-numbers
+      .expect(401)); // eslint-disable-line no-magic-numbers
 
   it("should fail if body is empty", () =>
     request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${config.port}`)
