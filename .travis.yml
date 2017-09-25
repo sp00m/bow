@@ -1,7 +1,7 @@
 language:
   - node_js
 node_js:
-  - "7"
+  - "7.6.0"
 services:
   - redis-server
 after_success:

@@ -2,6 +2,11 @@
   "name": "bow",
   "version": "1.0.0",
   "description": "Broadcast Over WebSocket",
+  "engines": [
+    {
+      "node": ">=7.6.0"
+    }
+  ],
   "keywords": [
     "bow",
     "websocket",

@@ -217,7 +217,7 @@ describe("MiddlewareServer with multiple middlewares", () => {
     return user;
   };
 
-  const getMessageFromBody = async (payload) => ({
+  const getMessageFromRequestBody = async (payload) => ({
     name: payload.name,
     payload,
     audience: payload.audience
@@ -240,8 +240,8 @@ describe("MiddlewareServer with multiple middlewares", () => {
     serverStoppers.push(await new Bow(serverConfig)
       .middleware("v1", getUserCriteriaByUserId)
       .middleware("v2", getUserCriteriaByUserId)
-      .inbound("/v1/messages", getMessageFromBody, "v1")
-      .inbound("/v2/messages", getMessageFromBody, "v2")
+      .inbound("/v1/messages", getMessageFromRequestBody, "v1")
+      .inbound("/v2/messages", getMessageFromRequestBody, "v2")
       .outbound("v1", getUserIdByToken, "v1")
       .outbound("v2", getUserIdByToken, "v2")
       .start());

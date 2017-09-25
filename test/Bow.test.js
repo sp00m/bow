@@ -198,8 +198,8 @@ describe("Bow inbound", () => {
     checkState("Expected inbound's path to be a non empty string", (bow) => bow
       .inbound()));
 
-  it("should fail if getMessageFromBody is not a function", async () =>
-    checkState("Expected inbound's getMessageFromBody to be a function", (bow) => bow
+  it("should fail if getMessageFromRequestBody is not a function", async () =>
+    checkState("Expected inbound's getMessageFromRequestBody to be a function", (bow) => bow
       .inbound("v1")));
 
   it("should fail if middlewareVersion is not a non empty string", async () =>

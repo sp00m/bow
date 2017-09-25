@@ -16,7 +16,7 @@ Bow helps you building a multitenant WebSocket server that fits into a microserv
 
 ## Specs
 
-Bow exposes two main APIs to third party:
+Bow exposes two main JSON-based APIs to third party:
 
 - **an HTTP API to push messages**, built on top of [Koa](http://koajs.com/);
 - and **a WebSocket API to receive messages**, built on top of [Socket.IO](https://socket.io/).
@@ -32,11 +32,17 @@ Bow is built upon these four main concepts:
 
 ### Message
 
-Messages must hold their *audience*, i.e. the tenants they must be dispatched to. An audience is composed by *queries*, themselves composed by *predicates*.
+A Bow *message* is composed by:
+
+- a *name*, that will be used for the WebSocket event name;
+- a *payload*, that will be used for the WebSocket event content;
+- and an *audience*, i.e. the tenants the WebSocket event must be dispatched to.
+
+An audience is composed by *queries*, themselves composed by *predicates*.
 
 #### Predicate
 
-A predicate is a key-value pair, where keys are strings and **values only one of the following JSON literals**:
+A *predicate* is a key-value pair, where keys are strings and **values only one of the following JSON literals**:
 
 - Boolean (`true` or `false`);
 - Number (e.g. `42` or `3.14159`);
@@ -44,7 +50,7 @@ A predicate is a key-value pair, where keys are strings and **values only one of
 
 #### Query
 
-A query is a conjunction (logical `AND`) of predicates as a JSON object, for example:
+A *query* is a conjunction (logical `AND`) of predicates as a JSON object, for example:
 
 ```json
 { "role": "author", "blogId": 42 }
@@ -54,7 +60,7 @@ The above query is composed by to predicates: `"role": "author"` and `"blogId": 
 
 #### Audience
 
-A query is a disjunction (logical `OR`) of queries as a JSON array, for example:
+An *audience* is a disjunction (logical `OR`) of queries as a JSON array, for example:
 
 ```json
 [
@@ -65,13 +71,29 @@ A query is a disjunction (logical `OR`) of queries as a JSON array, for example:
 
 The above audience is composed by two queries: one selecting admins, and another one selecting authors of the blog 42. The message holding this audience will thus be dispatched to either admins, or authors of the blog 42.
 
+#### Example
+
+Here is an example of what could be a message:
+
+```json
+{
+  "name": "NEW_ARTICLE",
+  "title": "This article has just been created",
+  "content": "The article content...",
+  "audience": [
+    { "role": "admin" },
+    { "role": "author", "blogId": 42 }
+  ]
+}
+```
+
 ### Middleware
 
-The purpose of middlewares is to resolve an audience, so that holding message can be dispatched to the right tenants. To do so, a middleware is able, given a user id, to generate _criteria_ defining the user.
+The purpose of *middlewares* is to resolve an audience, so that holding message can be dispatched to the right tenants. To do so, a middleware is able, given a user id, to generate *criteria* defining the user.
 
 #### Criterion
 
-Just like predicates, criteria are key-value pairs, where keys are strings and **values only one of the following JSON literals**:
+Just like predicates, *criteria* are key-value pairs, where keys are strings and **values only one of the following JSON literals**:
 
 - Boolean (`true` or `false`);
 - Number (e.g. `42` or `3.14159`);
@@ -94,7 +116,7 @@ The above criteria mean that the user is an author of the blogs 42 and 418.
 
 #### Resolution
 
-The resolution will first try to match audiences predicates keys with users criteria keys, then the audiences predicates values with the users criteria values.
+The *resolution* will first try to match audiences predicates keys with users criteria keys, then the audiences predicates values with the users criteria values.
 
 For example, given the following user criteria:
 
@@ -119,6 +141,77 @@ The first query in the audience (`{ "role": "admin" }`) won't match, because use
 But the second query in the audience (`{ "role": "author", "blogId": 42 }`) will match, because user's `role` criterion value is `"author"` and they are linked to blog 42.
 
 The message holding this audience will thus be forwarded to the user.
+
+### Inbound
+
+Messages are pushed via *inbounds*, which are basically HTTP endpoints built thanks to [Koa](http://koajs.com/). Inbounds are protected by [Basic Auth](https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication#Basic_authentication_scheme), which makes it easily compatible with [Amazon SNS](http://docs.aws.amazon.com/sns/latest/dg/SendMessageToHttp.html) for example.
+
+An inbound is composed by:
+
+- a *path*, **mapped to the HTTP method `POST`**;
+- and a *function*, that transforms a request body into a message via a promise.
+
+For example, given the following message:
+
+```json
+{
+  "name": "NEW_ARTICLE",
+  "title": "This article has just been created",
+  "content": "The article content...",
+  "audience": [
+    { "role": "admin" },
+    { "role": "author", "blogId": 42 }
+  ]
+}
+```
+
+The function could be:
+
+```js
+const getMessageFromRequestBody = async (body) => {
+  await validateMessageBody(body);
+  return {
+    name: body.name,
+    payload: body,
+    audience: body.audience
+  };
+};
+```
+
+### Outbound
+
+*Outbounds* handle WebSocket connections thanks to [Socket.IO](https://socket.io/), and are composed by:
+
+- a *version*;
+- and a *function* that returns a user id via a promise given a token.
+
+#### Handshake
+
+When connecting to an outbound, the client must provide the version it wants to use in the Socket.IO handshake query, thanks to a parameter named `v`. Once successfully connected, it must send an `authenticate` event holding the token needed by the outbound to authenticate the connection, along with an acknowledgement function that will be called if the client has been successfully authenticated.
+
+If an error occurred in the authentication process, Bow will first send an `alert` event with an explanation, **and will then disconnect the client**.
+
+For example:
+
+```js
+const io = require("socket.io-client");
+
+const url = "...";
+const version = "...";
+const token = "...";
+
+const socket = io(url, { query: { v: version } })
+  .on("alert", (alert) => {
+    console.error("Oops, something's gone wrong", alert);
+  })
+  .on("connect", () => {
+    console.log("Connected!");
+    socket.emit("authenticate", token, () => {
+      console.log("Authenticated!");
+      // start listening to actual events...
+    });
+  });
+```
 
 ## Usage
 
@@ -174,15 +267,15 @@ The version of this middleware, must be unique between all middlewares.
 
 A function that takes one single `userId` argument, and returns a promise resolved with the corresponding user criteria.
 
-### bow.inbound(path, getMessageFromBody, middlewareVersion)
+### bow.inbound(path, getMessageFromRequestBody, middlewareVersion)
 
 Registers a new inbound.
 
 #### path
 
-The path of this inbound, must be unique between all inbounds. This path will then be passed to Koa router, **mapped to the HTTP method POST**.
+The path of this inbound, must be unique between all inbounds. This path will then be passed to Koa router, **mapped to the HTTP method `POST`**.
 
-#### getMessageFromBody
+#### getMessageFromRequestBody
 
 A function that takes one single `body` argument as found in the HTTP request body, and returns a promise resolved with a *message* object, defined by:
 
@@ -253,7 +346,7 @@ const getUserCriteriaByUserId = async (id) => {
  * inbound configuration:
  */
 
-const getMessageFromBody = async (body) => ({
+const getMessageFromRequestBody = async (body) => ({
   name: body.name,
   payload: body,
   audience: body.audience
@@ -291,7 +384,7 @@ const getUserIdFromToken = async (token) => {
 
 const bow = new Bow(config)
   .middleware("v1.1", getUserCriteriaByUserId)
-  .inbound("/v1.2/messages", getMessageFromBody, "v1.1")
+  .inbound("/v1.2/messages", getMessageFromRequestBody, "v1.1")
   .outbound("v1.3", getUserIdFromToken, "v1.1");
 
 bow.start().then(() => {
@@ -334,10 +427,10 @@ AuthApi.askForBowToken()
 POST /v1.2/messages
 
 {
-  name: "NEW_ARTICLE",
-  title: "This article has just been created",
-  content: "The article content",
-  audience: [
+  "name": "NEW_ARTICLE",
+  "title": "This article has just been created",
+  "content": "The article content",
+  "audience": [
     { "role": "admin" },
     { "role": "author", "blogId": 42 }
   ]
