@@ -178,6 +178,14 @@ const getMessageFromRequestBody = async (body) => {
 };
 ```
 
+#### Possible HTTP response statuses
+
+- `404` if the URL is not handled;
+- `405` if the verb is not handled (paths are mapped to `POST`);
+- `401` if no auth is provided or if the provided auth is wrong;
+- `422` if no body is provided in the HTTP request or if the provided body cannot be parsed into a _message_;
+- `204` otherwise.
+
 ### Outbound
 
 *Outbounds* handle WebSocket connections thanks to [Socket.IO](https://socket.io/), and are composed by:
@@ -201,6 +209,9 @@ const version = "...";
 const token = "...";
 
 const socket = io(url, { query: { v: version } })
+  .on("error", (alert) => {
+    console.error("Oops, something's gone wrong", alert);
+  })
   .on("alert", (alert) => {
     console.error("Oops, something's gone wrong", alert);
   })
@@ -212,6 +223,13 @@ const socket = io(url, { query: { v: version } })
     });
   });
 ```
+
+#### Possible received WebSocket events
+
+- `error` if a namespace has been provided, or if no version has been provided in the handshake query parameters, or if the provided version if not handled;
+- `alert` if the authentication timeout has been reached, or if a user id could not be found given the provided token.
+
+Any of the above events will disconnect the client.
 
 ## Usage
 
@@ -333,9 +351,10 @@ const Bow = require("bow");
 const getUserCriteriaByUserId = async (id) => {
   const results = await dbConnection.query("SELECT * FROM user WHERE id = ?", id);
   if (1 === results.length) {
+    const user = result[0];
     return {
-      role: result[0]["role"],
-      blogId: result[0]["blog_id"]
+      role: user["role"],
+      blogId: user["blog_id"]
     };
   } else {
     throw new Error(`Expected one result for user id '${id}', but got ${results.length}`);
