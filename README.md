@@ -227,9 +227,9 @@ const socket = io(url, { query: { v: version } })
 #### Possible received WebSocket events
 
 - `error` if a namespace has been provided, or if no version has been provided in the handshake query parameters, or if the provided version if not handled;
-- `alert` if the authentication timeout has been reached, or if a user id could not be found given the provided token.
+- `alert` if the authentication timeout has been reached, or if a user id could not be found given the provided token, or if no criteria could get built given the user id.
 
-Any of the above events will disconnect the client.
+Any of the above events **will disconnect the client**.
 
 ## Usage
 
