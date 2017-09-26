@@ -97,11 +97,11 @@ Just like predicates, *criteria* are key-value pairs, where keys are strings and
 
 - Boolean (`true` or `false`);
 - Number (e.g. `42` or `3.14159`);
-- String (e.g. `"foobar"`);
+- String, non-empty (e.g. `"foobar"`);
 - Array (e.g. `[42, 418]`), which values must be only one of the following JSON literals:
   - Boolean (`true` or `false`);
   - Number (e.g. `42` or `3.14159`);
-  - String (e.g. `"foobar"`).
+  - String, non-empty (e.g. `"foobar"`).
 
 For example:
 
