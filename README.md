@@ -46,7 +46,7 @@ A *predicate* is a key-value pair, where keys are strings and **values only one 
 
 - Boolean (`true` or `false`);
 - Number (e.g. `42` or `3.14159`);
-- String (e.g. `"foobar"`).
+- String, non-empty (e.g. `"foobar"`).
 
 #### Query
 
@@ -193,6 +193,11 @@ const getMessageFromRequestBody = async (body) => {
 - a *version*;
 - and a *function* that returns a user id via a promise given a token.
 
+User ids must be **only one of the following JSON literals**:
+
+- Number (e.g. `42` or `3.14159`);
+- String, non-empty (e.g. `"foobar"`).
+
 #### Handshake
 
 When connecting to an outbound, the client must provide the version it wants to use in the Socket.IO handshake query, thanks to a parameter named `v`. Once successfully connected, it must send an `authenticate` event holding the token needed by the outbound to authenticate the connection, along with an acknowledgement function that will be called if the client has been successfully authenticated.
@@ -333,7 +338,7 @@ Table `user`:
 +----+----------+--------+---------+
 | id |   name   |  role  | blog_id |
 +----+----------+--------+---------+
-|  1 | Admin 1  | admin  |         |
+|  1 | Admin 1  | admin  |      42 |
 |  2 | Author 1 | author |      42 |
 |  3 | Author 2 | author |     418 |
 +----+----------+--------+---------+
