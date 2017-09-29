@@ -246,6 +246,14 @@ Bow requires **Node.js v7.6.0 or higher** for ES2015 and async function support.
 npm install --save bow
 ```
 
+### Environment variables
+
+If used in production environment, it is recommended to set the `NODE_ENV` environment variable to `production`.
+
+Because Bow uses [debug](https://www.npmjs.com/package/debug), you should set [the `DEBUG` environment variable](https://www.npmjs.com/package/debug#environment-variables) to `bow:*` (only useful messages will be logged).
+
+These variables can be easily set thanks to [cross-env](https://www.npmjs.com/package/cross-env).
+
 ### new Bow(config)
 
 Creates a new `Bow` instance, expected one `config` object argument:
