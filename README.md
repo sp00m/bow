@@ -56,7 +56,7 @@ A *query* is a conjunction (logical `AND`) of predicates as a JSON object, for e
 { "role": "author", "blogId": 42 }
 ```
 
-The above query is composed by to predicates: `"role": "author"` and `"blogId": 4`. Such a query will thus select only authors of the blog 42, i.e. both predicates must be fulfilled.
+The above query is composed by to predicates: `"role": "author"` and `"blogId": 42`. Such a query will thus select only authors of the blog 42, i.e. both predicates must be fulfilled.
 
 #### Audience
 
@@ -69,7 +69,7 @@ An *audience* is a disjunction (logical `OR`) of queries as a JSON array, for ex
 ]
 ```
 
-The above audience is composed by two queries: one selecting admins, and another one selecting authors of the blog 42. The message holding this audience will thus be dispatched to either admins, or authors of the blog 42.
+The above audience is composed by two queries: one selecting admins, and another one selecting the authors of the blog 42. The message holding this audience will thus be dispatched to either admins, or authors of the blog 42.
 
 #### Example
 
@@ -89,7 +89,12 @@ Here is an example of what could be a message:
 
 ### Middleware
 
-The purpose of *middlewares* is to resolve an audience, so that holding message can be dispatched to the right tenants. To do so, a middleware is able, given a user id, to generate *criteria* defining the user.
+The purpose of *middlewares* is to resolve an audience so that holding message can be dispatched to the right tenants.
+
+A middleware is composed by:
+
+- a *version* (String, non-empty);
+- and a *function*, that returns *criteria* via a promise given a user id.
 
 #### Criterion
 
@@ -116,7 +121,7 @@ The above criteria mean that the user is an author of the blogs 42 and 418.
 
 #### Resolution
 
-The *resolution* will first try to match audiences predicates keys with users criteria keys, then the audiences predicates values with the users criteria values.
+The *resolution* will first try to match the audiences predicates keys with the users criteria keys, then the audiences predicates values with the users criteria values.
 
 For example, given the following user criteria:
 
@@ -144,11 +149,11 @@ The message holding this audience will thus be forwarded to the user.
 
 ### Inbound
 
-Messages are pushed via *inbounds*, which are basically HTTP endpoints built thanks to [Koa](http://koajs.com/). Inbounds are protected by [Basic Auth](https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication#Basic_authentication_scheme), which makes it easily compatible with [Amazon SNS](http://docs.aws.amazon.com/sns/latest/dg/SendMessageToHttp.html) for example.
+Messages are pushed via *inbounds*, which are basically HTTP endpoints built thanks to [Koa](http://koajs.com/). Inbounds are protected by [Basic Auth](https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication#Basic_authentication_scheme), which makes it easily compatible with [Amazon SNS](http://docs.aws.amazon.com/sns/latest/dg/SendMessageToHttp.html) for example (if you plan to use Amazon SNS, [sns-validator](https://www.npmjs.com/package/sns-validator) could be useful).
 
 An inbound is composed by:
 
-- a *path*, **mapped to the HTTP method `POST`**;
+- a *path* (String, non-empty), **mapped to the HTTP method `POST`**;
 - and a *function*, that transforms a request body into a message via a promise.
 
 For example, given the following message:
@@ -190,7 +195,7 @@ const getMessageFromRequestBody = async (body) => {
 
 *Outbounds* handle WebSocket connections thanks to [Socket.IO](https://socket.io/), and are composed by:
 
-- a *version*;
+- a *version* (String, non-empty);
 - and a *function* that returns a user id via a promise given a token.
 
 User ids must be **only one of the following JSON literals**:
@@ -200,7 +205,7 @@ User ids must be **only one of the following JSON literals**:
 
 #### Handshake
 
-When connecting to an outbound, the client must provide the version it wants to use in the Socket.IO handshake query, thanks to a parameter named `v`. Once successfully connected, it must send an `authenticate` event holding the token needed by the outbound to authenticate the connection, along with an acknowledgement function that will be called if the client has been successfully authenticated.
+When connecting to an outbound, the client must provide the outbound version it wants to use in [the Socket.IO handshake query](https://socket.io/docs/client-api/#with-query-option), thanks to a parameter named `v`. Once successfully connected, it must send an `authenticate` event holding the token needed by the outbound to authenticate the connection, along with [an acknowledgement function](https://socket.io/docs/#sending-and-getting-data-(acknowledgements)) that will be called if the client has been successfully authenticated.
 
 If an error occurred in the authentication process, Bow will first send an `alert` event with an explanation, **and will then disconnect the client**.
 
