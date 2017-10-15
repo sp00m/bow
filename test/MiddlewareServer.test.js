@@ -156,8 +156,9 @@ describe("MiddlewareServer", () => {
   });
 
   after(async () => {
-    await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
+    const userCounts = await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
     serverStoppers.length = 0;
+    userCounts.reduce((total, userCount) => total + userCount, 0).should.equal(0);
   });
 
   it("should resolve audience", () => new Promise((connectionSucceeded, connectionFailed) => {
@@ -255,8 +256,9 @@ describe("MiddlewareServer with multiple middlewares", () => {
   });
 
   after(async () => {
-    await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
+    const userCounts = await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
     serverStoppers.length = 0;
+    userCounts.reduce((total, userCount) => total + userCount, 0).should.equal(0);
   });
 
   it("should resolve audience", () => new Promise((connectionSucceeded, connectionFailed) => {
@@ -300,8 +302,9 @@ describe("MiddlewareServer with HTTPS", () => {
   });
 
   after(async () => {
-    await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
+    const userCounts = await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
     serverStoppers.length = 0;
+    userCounts.reduce((total, userCount) => total + userCount, 0).should.equal(0);
   });
 
   after(() => {
@@ -346,8 +349,9 @@ describe("MiddlewareServer with Redis", () => {
   });
 
   after(async () => {
-    await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
+    const userCounts = await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
     serverStoppers.length = 0;
+    userCounts.reduce((total, userCount) => total + userCount, 0).should.equal(0);
   });
 
   it("should resolve audience on distinct instances", () => new Promise((connectionSucceeded, connectionFailed) => {
