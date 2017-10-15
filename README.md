@@ -437,10 +437,14 @@ const io = require("socket.io-client");
 const connectToBow = (version, token) => new Promise((resolve, reject) => {
   const socket = io(url, { query: { v: version } })
     .on("alert", reject)
+    .on("error", reject)
     .on("connect", () => {
       console.log("Connected!");
       socket.emit("authenticate", token, () => {
         console.log("Authenticated!");
+        socket
+          .off("alert", reject)
+          .off("error", reject);
         resolve(socket);
       });
     });
