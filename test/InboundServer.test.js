@@ -67,4 +67,8 @@ describe("InboundServer", () => {
       .send({ foo: "bar" })
       .expect(422)); // eslint-disable-line no-magic-numbers
 
+  it("should provide a health check", () => request(`http://localhost:${config.port}`)
+    .get("/health")
+    .expect(200)); // eslint-disable-line no-magic-numbers
+
 });
