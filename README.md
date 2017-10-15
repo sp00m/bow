@@ -219,8 +219,8 @@ const version = "...";
 const token = "...";
 
 const socket = io(url, { query: { v: version } })
-  .on("error", (alert) => {
-    console.error("Oops, something's gone wrong", alert);
+  .on("error", (error) => {
+    console.error("Oops, something's gone wrong", error);
   })
   .on("alert", (alert) => {
     console.error("Oops, something's gone wrong", alert);
