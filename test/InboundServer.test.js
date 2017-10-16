@@ -15,7 +15,7 @@ describe("InboundServer", () => {
       password: "qwerty"
     },
     outbound: {
-      timeout: 1000
+      timeout: 1
     }
   };
 

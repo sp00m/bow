@@ -220,16 +220,15 @@ const token = "...";
 
 const socket = io(url, { query: { v: version } })
   .on("error", (error) => {
-    console.error("Oops, something's gone wrong", error);
+    console.error("Oops, something's gone wrong:", error);
   })
   .on("alert", (alert) => {
-    console.error("Oops, something's gone wrong", alert);
+    console.error("Oops, something's gone wrong:", alert);
   })
   .on("connect", () => {
     console.log("Connected!");
     socket.emit("authenticate", token, () => {
       console.log("Authenticated!");
-      // start listening to actual events...
     });
   });
 ```
@@ -289,7 +288,7 @@ Optional, the `options` object to pass to [Redis `redis.createClient(...)` funct
 
 #### config.outbound.timeout
 
-**Required**, the timeout for WebSocket connections to authenticate.
+**Required**, the timeout for WebSocket connections to authenticate, in seconds.
 
 ### bow.middleware(config)
 
@@ -415,7 +414,7 @@ const getListenerIdFromToken = async (token) => {
      password: "thisisasecret"
    },
    outbound: {
-     timeout: 5000 // 5 seconds
+     timeout: 5 // seconds
    }
  };
 
@@ -445,38 +444,22 @@ bow.start().then(() => {
 ```js
 const io = require("socket.io-client");
 
-const connectToBow = (version, token) => new Promise((resolve, reject) => {
-  const socket = io(url, { query: { v: version } })
-    .on("alert", reject)
-    .on("error", reject)
-    .on("connect", () => {
-      console.log("Connected!");
-      socket.emit("authenticate", token, () => {
-        console.log("Authenticated!");
-        socket
-          .off("alert", reject)
-          .off("error", reject);
-        resolve(socket);
-      });
-    });
-});
+const onError = (error) => console.error("Oops, something's gone wrong:", error);
 
-AuthApi.askForBowToken()
-  .then((token) => connectToBow("v1.3", token))
-  .then((socket) => {
-    socket
-      .on("error", (error) => {
-        console.error("Oops, something's gone wrong", error);
-      })
-      .on("alert", (alert) => {
-        console.error("Oops, something's gone wrong", alert);
-      })
-      .on("NEW_ARTICLE", (article) => {
-        ArticleService.gatherArticle(article);
-      });
-  })
-  .catch((error) => {
-    console.error("Could not connect to Bow", error);
+const onNewArticle = (article) => {
+  // ...
+};
+
+const socket = io(url, { query: { v: "v1.3" } })
+  .on("NEW_ARTICLE", onNewArticle)
+  .on("alert", onError)
+  .on("error", onError)
+  .on("connect", async () => {
+    console.log("Connected!");
+    const token = await AuthService.getToken();
+    socket.emit("authenticate", token, () => {
+      console.log("Authenticated!");
+    });
   });
 ```
 
