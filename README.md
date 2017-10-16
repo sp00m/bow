@@ -464,9 +464,16 @@ const connectToBow = (version, token) => new Promise((resolve, reject) => {
 AuthApi.askForBowToken()
   .then((token) => connectToBow("v1.3", token))
   .then((socket) => {
-    socket.on("NEW_ARTICLE", (article) => {
-      ArticleService.gatherArticle(article);
-    });
+    socket
+      .on("error", (error) => {
+        console.error("Oops, something's gone wrong", error);
+      })
+      .on("alert", (alert) => {
+        console.error("Oops, something's gone wrong", alert);
+      })
+      .on("NEW_ARTICLE", (article) => {
+        ArticleService.gatherArticle(article);
+      });
   })
   .catch((error) => {
     console.error("Could not connect to Bow", error);
