@@ -289,7 +289,7 @@ Optional, the `options` object to pass to [Redis `redis.createClient(...)` funct
 
 #### config.outbound.timeout
 
-**Required**, the timeout for WebSocket connections to authenticate.
+**Required**, the timeout for WebSocket connections to authenticate, in seconds.
 
 ### bow.middleware(config)
 
@@ -415,7 +415,7 @@ const getListenerIdFromToken = async (token) => {
      password: "thisisasecret"
    },
    outbound: {
-     timeout: 5000 // 5 seconds
+     timeout: 5 // seconds
    }
  };
 
