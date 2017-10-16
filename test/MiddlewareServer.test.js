@@ -1,3 +1,5 @@
+/* eslint-disable max-lines */
+
 require("should");
 
 const check = require("check-types");
@@ -57,25 +59,36 @@ const buildServer = (port, options) => {
     serverConfig.redis = {};
   }
   return new Bow(serverConfig)
-    .middleware("v1", async (listenerId) => {
-      const listener = clone(usersById[listenerId]);
-      if (check.not.assigned(listener)) {
-        throw new Error(`Invalid listener id: '${listenerId}'`);
+    .middleware({
+      version: "v1",
+      getCriteriaByListenerId: async (listenerId) => {
+        const listener = clone(usersById[listenerId]);
+        if (check.not.assigned(listener)) {
+          throw new Error(`Invalid listener id: '${listenerId}'`);
+        }
+        return listener;
       }
-      return listener;
     })
-    .inbound("/messages", async (payload) => ({
-      name: payload.name,
-      payload,
-      audience: payload.audience
-    }), "v1")
-    .outbound("v1", async (token) => {
-      const listenerId = listenerIdsByToken[token];
-      if (check.not.assigned(listenerId)) {
-        throw new Error(`Invalid token: '${token}'`);
-      }
-      return listenerId;
-    }, "v1");
+    .inbound({
+      path: "/messages",
+      getMessageFromRequestBody: async (payload) => ({
+        name: payload.name,
+        payload,
+        audience: payload.audience
+      }),
+      middlewareVersion: "v1"
+    })
+    .outbound({
+      version: "v1",
+      getListenerIdByToken: async (token) => {
+        const listenerId = listenerIdsByToken[token];
+        if (check.not.assigned(listenerId)) {
+          throw new Error(`Invalid token: '${token}'`);
+        }
+        return listenerId;
+      },
+      middlewareVersion: "v1"
+    });
 };
 
 const simpleMessage = {
@@ -239,12 +252,34 @@ describe("MiddlewareServer with multiple middlewares", () => {
     const serverConfig = clone(config);
     serverConfig.port = SERVER_PORT;
     serverStoppers.push(await new Bow(serverConfig)
-      .middleware("v1", getCriteriaByListenerId)
-      .middleware("v2", getCriteriaByListenerId)
-      .inbound("/v1/messages", getMessageFromRequestBody, "v1")
-      .inbound("/v2/messages", getMessageFromRequestBody, "v2")
-      .outbound("v1", getListenerIdByToken, "v1")
-      .outbound("v2", getListenerIdByToken, "v2")
+      .middleware({
+        version: "v1",
+        getCriteriaByListenerId
+      })
+      .middleware({
+        version: "v2",
+        getCriteriaByListenerId
+      })
+      .inbound({
+        path: "/v1/messages",
+        getMessageFromRequestBody,
+        middlewareVersion: "v1"
+      })
+      .inbound({
+        path: "/v2/messages",
+        getMessageFromRequestBody,
+        middlewareVersion: "v2"
+      })
+      .outbound({
+        version: "v1",
+        getListenerIdByToken,
+        middlewareVersion: "v1"
+      })
+      .outbound({
+        version: "v2",
+        getListenerIdByToken,
+        middlewareVersion: "v2"
+      })
       .start());
   });
 

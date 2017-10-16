@@ -23,16 +23,28 @@ describe("InboundServer", () => {
 
   before(async () => {
     stopServer = await new Bow(config)
-      .middleware("v1", () => {}) // eslint-disable-line no-empty-function
-      .inbound("/v1/messages", (payload) => payload, "v1")
-      .outbound("v1", () => {}, "v1") // eslint-disable-line no-empty-function
+      .middleware({
+        version: "v1",
+        getCriteriaByListenerId: () => {} // eslint-disable-line no-empty-function
+      })
+      .inbound({
+        path: "/v1/messages",
+        getMessageFromRequestBody: (body) => body,
+        middlewareVersion: "v1"
+      })
+      .outbound({
+        version: "v1",
+        getListenerIdByToken: () => {}, // eslint-disable-line no-empty-function
+        middlewareVersion: "v1"
+      })
       .start();
   });
 
   after(async () => {
     if (check.assigned(stopServer)) {
-      await stopServer();
+      const listenerCount = await stopServer();
       stopServer = undefined;
+      listenerCount.should.equal(0);
     }
   });
 
