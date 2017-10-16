@@ -30,7 +30,7 @@ const listenerIdsByToken = {
   [AUTHOR4_TOKEN]: AUTHOR4_ID
 };
 
-const usersById = {
+const listenersById = {
   [ADMIN1_ID]: { role: "admin" },
   [AUTHOR1_ID]: { role: "author", blogId: 1 },
   [AUTHOR2_ID]: { role: "author", blogId: 2 },
@@ -62,7 +62,7 @@ const buildServer = (port, options) => {
     .middleware({
       version: "v1",
       getCriteriaFromListenerId: async (listenerId) => {
-        const listener = clone(usersById[listenerId]);
+        const listener = clone(listenersById[listenerId]);
         if (check.not.assigned(listener)) {
           throw new Error(`Invalid listener id: '${listenerId}'`);
         }
@@ -224,7 +224,7 @@ describe("MiddlewareServer with multiple middlewares", () => {
   const SERVER_PORT = 3000;
 
   const getCriteriaFromListenerId = async (listenerId) => {
-    const listener = usersById[listenerId];
+    const listener = listenersById[listenerId];
     if (check.not.assigned(listener)) {
       throw new Error(`Invalid listener id: '${listenerId}'`);
     }
@@ -413,9 +413,9 @@ describe("MiddlewareServer with Redis", () => {
       connectionSucceeded, connectionFailed
     ));
   }).then((messagePromiseGetter) => new Promise((connectionSucceeded, connectionFailed) => {
-    usersById[ADMIN1_ID].role = "author";
+    listenersById[ADMIN1_ID].role = "author";
     reverters.push(() => {
-      usersById[ADMIN1_ID].role = "admin";
+      listenersById[ADMIN1_ID].role = "admin";
     });
     sockets.push(createSocketNotExpectingMessage(
       "http", SECOND_SERVER_PORT, 1, ADMIN1_TOKEN, simpleMessage,

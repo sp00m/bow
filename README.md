@@ -121,7 +121,7 @@ The above criteria mean that the listener is an author of the blogs 42 and 418.
 
 #### Resolution
 
-The *resolution* will first try to match the audiences predicates keys with the users criteria keys, then the audiences predicates values with the users criteria values.
+The *resolution* will first try to match the audiences predicates keys with the listeners criteria keys, then the audiences predicates values with the listeners criteria values.
 
 For example, given the following listener criteria:
 
@@ -341,7 +341,7 @@ The middleware version to use to resolve the listener from the id retrieved than
 
 ## Example
 
-Following example uses [JWT](https://jwt.io/) for generating tokens, and a relational database holding the users.
+Following example uses [JWT](https://jwt.io/) for generating tokens, and a relational database holding the users (i.e. the *listeners*).
 
 ### Database
 
