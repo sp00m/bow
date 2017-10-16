@@ -38,12 +38,22 @@ const checkState = async (message, bowDecorator) => {
   }
 };
 
-const createValidMiddleware = (version) =>
-  [version, () => {}]; // eslint-disable-line no-empty-function
-const createValidInbound = (version) =>
-  [version, () => {}, version]; // eslint-disable-line no-empty-function
-const createValidOutbound = (version) =>
-  [version, () => {}, version]; // eslint-disable-line no-empty-function
+const createValidMiddleware = (version) => ({
+  version,
+  getCriteriaByListenerId: () => {} // eslint-disable-line no-empty-function
+});
+
+const createValidInbound = (version) => ({
+  path: version,
+  getMessageFromRequestBody: () => {}, // eslint-disable-line no-empty-function
+  middlewareVersion: version
+});
+
+const createValidOutbound = (version) => ({
+  version,
+  getListenerIdByToken: () => {}, // eslint-disable-line no-empty-function
+  middlewareVersion: version
+});
 
 describe("Bow config", () => {
 
@@ -160,103 +170,133 @@ describe("Bow config", () => {
 
 describe("Bow middleware", () => {
 
-  it("should fail if version is not a non empty string", async () =>
-    checkState("Expected middleware's version to be a non empty string", (bow) => bow
+  it("should fail if config is not an object", async () =>
+    checkState("Expected middleware's config to be an object", (bow) => bow
       .middleware()));
 
-  it("should fail if getUserCriteriaByUserId is not a function", async () =>
-    checkState("Expected middleware's getUserCriteriaByUserId to be a function", (bow) => bow
-      .middleware("v1")));
+  it("should fail if version is not a non empty string", async () =>
+    checkState("Expected middleware's version to be a non empty string", (bow) => bow
+      .middleware({})));
+
+  it("should fail if getCriteriaByListenerId is not a function", async () =>
+    checkState("Expected middleware's getCriteriaByListenerId to be a function", (bow) => bow
+      .middleware({
+        version: "v1"
+      })));
 
   it("should fail if none is registered", async () =>
     checkState("No middleware has been registered"));
 
   it("should fail middlewares share the same version", async () =>
     checkState("Some middlewares have duplicated versions", (bow) => bow
-      .inbound(...createValidInbound("v1"))
-      .outbound(...createValidOutbound("v1"))
-      .middleware(...createValidMiddleware("v1"))
-      .middleware(...createValidMiddleware("v1"))));
+      .inbound(createValidInbound("v1"))
+      .outbound(createValidOutbound("v1"))
+      .middleware(createValidMiddleware("v1"))
+      .middleware(createValidMiddleware("v1"))));
 
   it("should fail if a middleware is unused by inbounds", async () =>
     checkState("Some middlewares are unused by inbounds", (bow) => bow
-      .inbound(...createValidInbound("v2"))
-      .outbound(...createValidOutbound("v1"))
-      .middleware(...createValidMiddleware("v1")))); // eslint-disable-line no-empty-function
+      .inbound(createValidInbound("v2"))
+      .outbound(createValidOutbound("v1"))
+      .middleware(createValidMiddleware("v1"))));
 
   it("should fail if a middleware is unused by outbounds", async () =>
     checkState("Some middlewares are unused by outbounds", (bow) => bow
-      .inbound(...createValidInbound("v1"))
-      .outbound(...createValidOutbound("v2"))
-      .middleware(...createValidMiddleware("v1")))); // eslint-disable-line no-empty-function
+      .inbound(createValidInbound("v1"))
+      .outbound(createValidOutbound("v2"))
+      .middleware(createValidMiddleware("v1"))));
 
 });
 
 describe("Bow inbound", () => {
 
+  it("should fail if config is not an object", async () =>
+    checkState("Expected inbound's config to be an object", (bow) => bow
+      .inbound()));
+
   it("should fail if path is not a non empty string", async () =>
     checkState("Expected inbound's path to be a non empty string", (bow) => bow
-      .inbound()));
+      .inbound({})));
+
+  it("should fail if path is /health", async () =>
+    checkState("'/health' is reserved, it cannot be used for an inbound", (bow) => bow
+      .inbound({
+        path: "/health"
+      })));
 
   it("should fail if getMessageFromRequestBody is not a function", async () =>
     checkState("Expected inbound's getMessageFromRequestBody to be a function", (bow) => bow
-      .inbound("v1")));
+      .inbound({
+        path: "v1"
+      })));
 
   it("should fail if middlewareVersion is not a non empty string", async () =>
     checkState("Expected inbound's middlewareVersion to be a non empty string", (bow) => bow
-      .inbound("v1", () => {}))); // eslint-disable-line no-empty-function
+      .inbound({
+        path: "v1",
+        getMessageFromRequestBody: () => {} // eslint-disable-line no-empty-function
+      })));
 
   it("should fail if none is registered", async () =>
     checkState("No inbound has been registered", (bow) => bow
-      .middleware(...createValidMiddleware("v1"))));
+      .middleware(createValidMiddleware("v1"))));
 
   it("should fail if inbounds share the same paths", async () =>
     checkState("Some inbounds have duplicated paths", (bow) => bow
-      .inbound(...createValidInbound("v1"))
-      .inbound(...createValidInbound("v1"))
-      .outbound(...createValidOutbound("v1"))
-      .middleware(...createValidMiddleware("v1"))));
+      .inbound(createValidInbound("v1"))
+      .inbound(createValidInbound("v1"))
+      .outbound(createValidOutbound("v1"))
+      .middleware(createValidMiddleware("v1"))));
 
   it("should fail if an inbound has unexisting middleware version", async () =>
     checkState("Some inbounds have unexisting middleware versions", (bow) => bow
-      .inbound(...createValidInbound("v1"))
-      .inbound(...createValidInbound("v2"))
-      .outbound(...createValidOutbound("v1"))
-      .middleware(...createValidMiddleware("v1"))));
+      .inbound(createValidInbound("v1"))
+      .inbound(createValidInbound("v2"))
+      .outbound(createValidOutbound("v1"))
+      .middleware(createValidMiddleware("v1"))));
 
 });
 
 describe("Bow outbound", () => {
 
-  it("should fail if version is not a non empty string", async () =>
-    checkState("Expected outbound's version to be a non empty string", (bow) => bow
+  it("should fail if config is not an object", async () =>
+    checkState("Expected outbound's config to be an object", (bow) => bow
       .outbound()));
 
-  it("should fail if getUserIdByToken is not a function", async () =>
-    checkState("Expected outbound's getUserIdByToken to be a function", (bow) => bow
-      .outbound("v1")));
+  it("should fail if version is not a non empty string", async () =>
+    checkState("Expected outbound's version to be a non empty string", (bow) => bow
+      .outbound({})));
+
+  it("should fail if getListenerIdByToken is not a function", async () =>
+    checkState("Expected outbound's getListenerIdByToken to be a function", (bow) => bow
+      .outbound({
+        version: "v1"
+      })));
 
   it("should fail if middlewareVersion is not a non empty string", async () =>
     checkState("Expected outbound's middlewareVersion to be a non empty string", (bow) => bow
-      .outbound("v1", () => {}))); // eslint-disable-line no-empty-function
+      .outbound({
+        version: "v1",
+        getListenerIdByToken: () => {} // eslint-disable-line no-empty-function
+      })));
 
   it("should fail if none is registered", async () =>
     checkState("No outbound has been registered", (bow) => bow
-      .middleware(...createValidMiddleware("v1"))
-      .inbound(...createValidInbound("v1"))));
+      .middleware(createValidMiddleware("v1"))
+      .inbound(createValidInbound("v1"))));
 
   it("should fail if outbounds share the same versions", async () =>
     checkState("Some outbounds have duplicated versions", (bow) => bow
-      .inbound(...createValidInbound("v1"))
-      .outbound(...createValidOutbound("v1"))
-      .outbound(...createValidOutbound("v1"))
-      .middleware(...createValidMiddleware("v1"))));
+      .inbound(createValidInbound("v1"))
+      .outbound(createValidOutbound("v1"))
+      .outbound(createValidOutbound("v1"))
+      .middleware(createValidMiddleware("v1"))));
 
   it("should fail if an outbound has unexisting middleware version", async () =>
     checkState("Some outbounds have unexisting middleware versions", (bow) => bow
-      .inbound(...createValidInbound("v1"))
-      .outbound(...createValidOutbound("v1"))
-      .outbound(...createValidOutbound("v2"))
-      .middleware(...createValidMiddleware("v1"))));
+      .inbound(createValidInbound("v1"))
+      .outbound(createValidOutbound("v1"))
+      .outbound(createValidOutbound("v2"))
+      .middleware(createValidMiddleware("v1"))));
 
 });

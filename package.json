@@ -1,6 +1,6 @@
 {
   "name": "bow",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Broadcast Over WebSocket",
   "keywords": [
     "bow",
@@ -37,7 +37,6 @@
     "killable": "^1.0.0",
     "koa": "^2.3.0",
     "koa-bodyparser": "^4.2.0",
-    "koa-ping": "^0.1.1",
     "koa-router": "^7.2.1",
     "redis": "^2.8.0",
     "socket.io": "^2.0.3",

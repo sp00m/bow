@@ -1,3 +1,5 @@
+/* eslint-disable max-lines */
+
 require("should");
 
 const check = require("check-types");
@@ -20,7 +22,7 @@ const AUTHOR2_ID = 3;
 const AUTHOR3_ID = 4;
 const AUTHOR4_ID = 5;
 
-const userIdsByToken = {
+const listenerIdsByToken = {
   [ADMIN1_TOKEN]: ADMIN1_ID,
   [AUTHOR1_TOKEN]: AUTHOR1_ID,
   [AUTHOR2_TOKEN]: AUTHOR2_ID,
@@ -57,25 +59,36 @@ const buildServer = (port, options) => {
     serverConfig.redis = {};
   }
   return new Bow(serverConfig)
-    .middleware("v1", async (userId) => {
-      const user = clone(usersById[userId]);
-      if (check.not.assigned(user)) {
-        throw new Error(`Invalid user id: '${userId}'`);
+    .middleware({
+      version: "v1",
+      getCriteriaByListenerId: async (listenerId) => {
+        const listener = clone(usersById[listenerId]);
+        if (check.not.assigned(listener)) {
+          throw new Error(`Invalid listener id: '${listenerId}'`);
+        }
+        return listener;
       }
-      return user;
     })
-    .inbound("/messages", async (payload) => ({
-      name: payload.name,
-      payload,
-      audience: payload.audience
-    }), "v1")
-    .outbound("v1", async (token) => {
-      const userId = userIdsByToken[token];
-      if (check.not.assigned(userId)) {
-        throw new Error(`Invalid token: '${token}'`);
-      }
-      return userId;
-    }, "v1");
+    .inbound({
+      path: "/messages",
+      getMessageFromRequestBody: async (payload) => ({
+        name: payload.name,
+        payload,
+        audience: payload.audience
+      }),
+      middlewareVersion: "v1"
+    })
+    .outbound({
+      version: "v1",
+      getListenerIdByToken: async (token) => {
+        const listenerId = listenerIdsByToken[token];
+        if (check.not.assigned(listenerId)) {
+          throw new Error(`Invalid token: '${token}'`);
+        }
+        return listenerId;
+      },
+      middlewareVersion: "v1"
+    });
 };
 
 const simpleMessage = {
@@ -156,9 +169,9 @@ describe("MiddlewareServer", () => {
   });
 
   after(async () => {
-    const userCounts = await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
+    const listenerCounts = await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
     serverStoppers.length = 0;
-    userCounts.reduce((total, userCount) => total + userCount, 0).should.equal(0);
+    listenerCounts.reduce((total, listenerCount) => total + listenerCount, 0).should.equal(0);
   });
 
   it("should resolve audience", () => new Promise((connectionSucceeded, connectionFailed) => {
@@ -190,7 +203,7 @@ describe("MiddlewareServer", () => {
     pushMessage("http", SERVER_PORT, "/messages", complexMessage, messagePromiseGetter)
   ));
 
-  it("should handle same user connected multiple times", () => new Promise((connectionSucceeded, connectionFailed) => {
+  it("should handle same listener connected multiple times", () => new Promise((connectionSucceeded, connectionFailed) => {
     sockets.push(createSocketExpectingMessage(
       "http", SERVER_PORT, 1, ADMIN1_TOKEN, simpleMessage,
       connectionSucceeded, connectionFailed
@@ -210,12 +223,12 @@ describe("MiddlewareServer with multiple middlewares", () => {
 
   const SERVER_PORT = 3000;
 
-  const getUserCriteriaByUserId = async (userId) => {
-    const user = usersById[userId];
-    if (check.not.assigned(user)) {
-      throw new Error(`Invalid user id: '${userId}'`);
+  const getCriteriaByListenerId = async (listenerId) => {
+    const listener = usersById[listenerId];
+    if (check.not.assigned(listener)) {
+      throw new Error(`Invalid listener id: '${listenerId}'`);
     }
-    return user;
+    return listener;
   };
 
   const getMessageFromRequestBody = async (payload) => ({
@@ -224,12 +237,12 @@ describe("MiddlewareServer with multiple middlewares", () => {
     audience: payload.audience
   });
 
-  const getUserIdByToken = async (token) => {
-    const userId = userIdsByToken[token];
-    if (check.not.assigned(userId)) {
+  const getListenerIdByToken = async (token) => {
+    const listenerId = listenerIdsByToken[token];
+    if (check.not.assigned(listenerId)) {
       throw new Error(`Invalid token: '${token}'`);
     }
-    return userId;
+    return listenerId;
   };
 
   const serverStoppers = [];
@@ -239,12 +252,34 @@ describe("MiddlewareServer with multiple middlewares", () => {
     const serverConfig = clone(config);
     serverConfig.port = SERVER_PORT;
     serverStoppers.push(await new Bow(serverConfig)
-      .middleware("v1", getUserCriteriaByUserId)
-      .middleware("v2", getUserCriteriaByUserId)
-      .inbound("/v1/messages", getMessageFromRequestBody, "v1")
-      .inbound("/v2/messages", getMessageFromRequestBody, "v2")
-      .outbound("v1", getUserIdByToken, "v1")
-      .outbound("v2", getUserIdByToken, "v2")
+      .middleware({
+        version: "v1",
+        getCriteriaByListenerId
+      })
+      .middleware({
+        version: "v2",
+        getCriteriaByListenerId
+      })
+      .inbound({
+        path: "/v1/messages",
+        getMessageFromRequestBody,
+        middlewareVersion: "v1"
+      })
+      .inbound({
+        path: "/v2/messages",
+        getMessageFromRequestBody,
+        middlewareVersion: "v2"
+      })
+      .outbound({
+        version: "v1",
+        getListenerIdByToken,
+        middlewareVersion: "v1"
+      })
+      .outbound({
+        version: "v2",
+        getListenerIdByToken,
+        middlewareVersion: "v2"
+      })
       .start());
   });
 
@@ -256,9 +291,9 @@ describe("MiddlewareServer with multiple middlewares", () => {
   });
 
   after(async () => {
-    const userCounts = await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
+    const listenerCounts = await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
     serverStoppers.length = 0;
-    userCounts.reduce((total, userCount) => total + userCount, 0).should.equal(0);
+    listenerCounts.reduce((total, listenerCount) => total + listenerCount, 0).should.equal(0);
   });
 
   it("should resolve audience", () => new Promise((connectionSucceeded, connectionFailed) => {
@@ -302,9 +337,9 @@ describe("MiddlewareServer with HTTPS", () => {
   });
 
   after(async () => {
-    const userCounts = await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
+    const listenerCounts = await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
     serverStoppers.length = 0;
-    userCounts.reduce((total, userCount) => total + userCount, 0).should.equal(0);
+    listenerCounts.reduce((total, listenerCount) => total + listenerCount, 0).should.equal(0);
   });
 
   after(() => {
@@ -349,9 +384,9 @@ describe("MiddlewareServer with Redis", () => {
   });
 
   after(async () => {
-    const userCounts = await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
+    const listenerCounts = await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
     serverStoppers.length = 0;
-    userCounts.reduce((total, userCount) => total + userCount, 0).should.equal(0);
+    listenerCounts.reduce((total, listenerCount) => total + listenerCount, 0).should.equal(0);
   });
 
   it("should resolve audience on distinct instances", () => new Promise((connectionSucceeded, connectionFailed) => {
@@ -372,7 +407,7 @@ describe("MiddlewareServer with Redis", () => {
     pushMessage("http", FIRST_SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)
   ));
 
-  it("should share user criteria between instances", () => new Promise((connectionSucceeded, connectionFailed) => {
+  it("should share listener criteria between instances", () => new Promise((connectionSucceeded, connectionFailed) => {
     sockets.push(createSocketNotExpectingMessage(
       "http", FIRST_SERVER_PORT, 1, ADMIN1_TOKEN, simpleMessage,
       connectionSucceeded, connectionFailed

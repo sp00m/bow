@@ -24,11 +24,22 @@ describe("OutboundServer", () => {
 
   before(async () => {
     stopServer = await new Bow(config)
-      .middleware("v1", () => {}) // eslint-disable-line no-empty-function
-      .inbound("/v1", () => {}, "v1") // eslint-disable-line no-empty-function
-      .outbound("v1", async (token) => {
-        throw new Error(`Invalid token: '${token}'`);
-      }, "v1")
+      .middleware({
+        version: "v1",
+        getCriteriaByListenerId: () => {} // eslint-disable-line no-empty-function
+      })
+      .inbound({
+        path: "/v1",
+        getMessageFromRequestBody: () => {}, // eslint-disable-line no-empty-function
+        middlewareVersion: "v1"
+      })
+      .outbound({
+        version: "v1",
+        getListenerIdByToken: async (token) => {
+          throw new Error(`Invalid token: '${token}'`);
+        },
+        middlewareVersion: "v1"
+      })
       .start();
   });
 
@@ -41,8 +52,9 @@ describe("OutboundServer", () => {
 
   after(async () => {
     if (check.assigned(stopServer)) {
-      await stopServer();
+      const listenerCount = await stopServer();
       stopServer = undefined;
+      listenerCount.should.equal(0);
     }
   });
 
