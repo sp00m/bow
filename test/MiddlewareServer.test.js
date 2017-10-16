@@ -61,7 +61,7 @@ const buildServer = (port, options) => {
   return new Bow(serverConfig)
     .middleware({
       version: "v1",
-      getCriteriaByListenerId: async (listenerId) => {
+      getCriteriaFromListenerId: async (listenerId) => {
         const listener = clone(usersById[listenerId]);
         if (check.not.assigned(listener)) {
           throw new Error(`Invalid listener id: '${listenerId}'`);
@@ -80,7 +80,7 @@ const buildServer = (port, options) => {
     })
     .outbound({
       version: "v1",
-      getListenerIdByToken: async (token) => {
+      getListenerIdFromToken: async (token) => {
         const listenerId = listenerIdsByToken[token];
         if (check.not.assigned(listenerId)) {
           throw new Error(`Invalid token: '${token}'`);
@@ -223,7 +223,7 @@ describe("MiddlewareServer with multiple middlewares", () => {
 
   const SERVER_PORT = 3000;
 
-  const getCriteriaByListenerId = async (listenerId) => {
+  const getCriteriaFromListenerId = async (listenerId) => {
     const listener = usersById[listenerId];
     if (check.not.assigned(listener)) {
       throw new Error(`Invalid listener id: '${listenerId}'`);
@@ -237,7 +237,7 @@ describe("MiddlewareServer with multiple middlewares", () => {
     audience: payload.audience
   });
 
-  const getListenerIdByToken = async (token) => {
+  const getListenerIdFromToken = async (token) => {
     const listenerId = listenerIdsByToken[token];
     if (check.not.assigned(listenerId)) {
       throw new Error(`Invalid token: '${token}'`);
@@ -254,11 +254,11 @@ describe("MiddlewareServer with multiple middlewares", () => {
     serverStoppers.push(await new Bow(serverConfig)
       .middleware({
         version: "v1",
-        getCriteriaByListenerId
+        getCriteriaFromListenerId
       })
       .middleware({
         version: "v2",
-        getCriteriaByListenerId
+        getCriteriaFromListenerId
       })
       .inbound({
         path: "/v1/messages",
@@ -272,12 +272,12 @@ describe("MiddlewareServer with multiple middlewares", () => {
       })
       .outbound({
         version: "v1",
-        getListenerIdByToken,
+        getListenerIdFromToken,
         middlewareVersion: "v1"
       })
       .outbound({
         version: "v2",
-        getListenerIdByToken,
+        getListenerIdFromToken,
         middlewareVersion: "v2"
       })
       .start());

@@ -291,27 +291,27 @@ Optional, the `options` object to pass to [Redis `redis.createClient(...)` funct
 
 **Required**, the timeout for WebSocket connections to authenticate.
 
-### bow.middleware(version, getCriteriaByListenerId)
+### bow.middleware(config)
 
 Registers a new middleware.
 
-#### version
+#### config.version
 
 The version of this middleware, must be unique between all middlewares.
 
-#### getCriteriaByListenerId
+#### config.getCriteriaFromListenerId
 
 A function that takes one single `listenerId` argument, and returns a promise resolved with the corresponding listener criteria.
 
-### bow.inbound(path, getMessageFromRequestBody, middlewareVersion)
+### bow.inbound(config)
 
 Registers a new inbound.
 
-#### path
+#### config.path
 
 The path of this inbound, must be unique between all inbounds. This path will then be passed to Koa router, **mapped to the HTTP method `POST`**. **The path cannot be `/health`**, as it is reserved for health check (returns an empty `200` response).
 
-#### getMessageFromRequestBody
+#### config.getMessageFromRequestBody
 
 A function that takes one single `body` argument as found in the HTTP request body, and returns a promise resolved with a *message* object, defined by:
 
@@ -319,23 +319,23 @@ A function that takes one single `body` argument as found in the HTTP request bo
 - a `payload` property, that will be the `eventPayload`parameter passed to [Socket.IO `socket.emit(...)`](https://socket.io/docs/emit-cheatsheet/);
 - and an `audience` property, that will passed to the chosen middleware so that it can dispatch the event as expected.
 
-#### middlewareVersion
+#### config.middlewareVersion
 
 The middleware version to use to resolve the audiences found in pushed messages.
 
-### bow.outbound(version, getListenerIdByToken, middlewareVersion)
+### bow.outbound(config)
 
 Registers a new outbound.
 
-#### version
+#### config.version
 
 The version of this outbound, must be unique between all outbounds.
 
-#### getListenerIdByToken
+#### config.getListenerIdFromToken
 
 A function that takes one single `token` argument (the one provided when authenticating a WebSocket connection), and returns a promise resolved with the corresponding listener id.
 
-#### middlewareVersion
+#### config.middlewareVersion
 
 The middleware version to use to resolve the listener from the id retrieved thanks to the token.
 
@@ -366,7 +366,7 @@ const Bow = require("bow");
  * middleware configuration:
  */
 
-const getCriteriaByListenerId = async (id) => {
+const getCriteriaFromListenerId = async (id) => {
   const results = await dbConnection.query("SELECT * FROM listener WHERE id = ?", id);
   if (1 === results.length) {
     const listener = result[0];
@@ -420,9 +420,20 @@ const getListenerIdFromToken = async (token) => {
  };
 
 const bow = new Bow(config)
-  .middleware("v1.1", getCriteriaByListenerId)
-  .inbound("/v1.2/messages", getMessageFromRequestBody, "v1.1")
-  .outbound("v1.3", getListenerIdFromToken, "v1.1");
+  .middleware({
+    version: "v1.1",
+    getCriteriaFromListenerId
+  })
+  .inbound({
+    path: "/v1.2/messages",
+    getMessageFromRequestBody,
+    middlewareVersion: "v1.1"
+  })
+  .outbound({
+    version: "v1.3",
+    getListenerIdFromToken,
+    middlewareVersion: "v1.1"
+  });
 
 bow.start().then(() => {
   console.log("Ready!");
