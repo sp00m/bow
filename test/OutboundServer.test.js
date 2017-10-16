@@ -26,7 +26,7 @@ describe("OutboundServer", () => {
     stopServer = await new Bow(config)
       .middleware({
         version: "v1",
-        getCriteriaByListenerId: () => {} // eslint-disable-line no-empty-function
+        getCriteriaFromListenerId: () => {} // eslint-disable-line no-empty-function
       })
       .inbound({
         path: "/v1",
@@ -35,7 +35,7 @@ describe("OutboundServer", () => {
       })
       .outbound({
         version: "v1",
-        getListenerIdByToken: async (token) => {
+        getListenerIdFromToken: async (token) => {
           throw new Error(`Invalid token: '${token}'`);
         },
         middlewareVersion: "v1"

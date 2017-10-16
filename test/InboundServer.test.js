@@ -25,7 +25,7 @@ describe("InboundServer", () => {
     stopServer = await new Bow(config)
       .middleware({
         version: "v1",
-        getCriteriaByListenerId: () => {} // eslint-disable-line no-empty-function
+        getCriteriaFromListenerId: () => {} // eslint-disable-line no-empty-function
       })
       .inbound({
         path: "/v1/messages",
@@ -34,7 +34,7 @@ describe("InboundServer", () => {
       })
       .outbound({
         version: "v1",
-        getListenerIdByToken: () => {}, // eslint-disable-line no-empty-function
+        getListenerIdFromToken: () => {}, // eslint-disable-line no-empty-function
         middlewareVersion: "v1"
       })
       .start();
