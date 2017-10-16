@@ -309,7 +309,7 @@ Registers a new inbound.
 
 #### path
 
-The path of this inbound, must be unique between all inbounds. This path will then be passed to Koa router, **mapped to the HTTP method `POST`**.
+The path of this inbound, must be unique between all inbounds. This path will then be passed to Koa router, **mapped to the HTTP method `POST`**. **The path cannot be `/health`**, as it is reserved for health check (returns an empty `200` response).
 
 #### getMessageFromRequestBody
 

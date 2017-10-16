@@ -1,4 +1,5 @@
 {
+  "ok": 200,
   "noContent": 204,
   "forbidden": 403,
   "unprocessableEntity": 422

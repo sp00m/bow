@@ -198,6 +198,10 @@ describe("Bow inbound", () => {
     checkState("Expected inbound's path to be a non empty string", (bow) => bow
       .inbound()));
 
+  it("should fail if path is /health", async () =>
+    checkState("'/health' is reserved, it cannot be used for an inbound", (bow) => bow
+      .inbound("/health")));
+
   it("should fail if getMessageFromRequestBody is not a function", async () =>
     checkState("Expected inbound's getMessageFromRequestBody to be a function", (bow) => bow
       .inbound("v1")));
