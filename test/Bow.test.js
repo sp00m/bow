@@ -164,8 +164,8 @@ describe("Bow middleware", () => {
     checkState("Expected middleware's version to be a non empty string", (bow) => bow
       .middleware()));
 
-  it("should fail if getUserCriteriaByUserId is not a function", async () =>
-    checkState("Expected middleware's getUserCriteriaByUserId to be a function", (bow) => bow
+  it("should fail if getCriteriaByListenerId is not a function", async () =>
+    checkState("Expected middleware's getCriteriaByListenerId to be a function", (bow) => bow
       .middleware("v1")));
 
   it("should fail if none is registered", async () =>
@@ -232,8 +232,8 @@ describe("Bow outbound", () => {
     checkState("Expected outbound's version to be a non empty string", (bow) => bow
       .outbound()));
 
-  it("should fail if getUserIdByToken is not a function", async () =>
-    checkState("Expected outbound's getUserIdByToken to be a function", (bow) => bow
+  it("should fail if getListenerIdByToken is not a function", async () =>
+    checkState("Expected outbound's getListenerIdByToken to be a function", (bow) => bow
       .outbound("v1")));
 
   it("should fail if middlewareVersion is not a non empty string", async () =>

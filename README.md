@@ -94,7 +94,7 @@ The purpose of *middlewares* is to resolve an audience so that holding message c
 A middleware is composed by:
 
 - a *version* (String, non-empty);
-- and a *function*, that returns *criteria* via a promise given a user id.
+- and a *function*, that returns *criteria* via a promise given a listener id.
 
 #### Criterion
 
@@ -117,13 +117,13 @@ For example:
 }
 ```
 
-The above criteria mean that the user is an author of the blogs 42 and 418.
+The above criteria mean that the listener is an author of the blogs 42 and 418.
 
 #### Resolution
 
 The *resolution* will first try to match the audiences predicates keys with the users criteria keys, then the audiences predicates values with the users criteria values.
 
-For example, given the following user criteria:
+For example, given the following listener criteria:
 
 ```json
 {
@@ -141,11 +141,11 @@ And the following audience:
 ]
 ```
 
-The first query in the audience (`{ "role": "admin" }`) won't match, because user's `role` criterion value is `"author"`.
+The first query in the audience (`{ "role": "admin" }`) won't match, because listener's `role` criterion value is `"author"`.
 
-But the second query in the audience (`{ "role": "author", "blogId": 42 }`) will match, because user's `role` criterion value is `"author"` and they are linked to blog 42.
+But the second query in the audience (`{ "role": "author", "blogId": 42 }`) will match, because listener's `role` criterion value is `"author"` and they are linked to blog 42.
 
-The message holding this audience will thus be forwarded to the user.
+The message holding this audience will thus be forwarded to the listener.
 
 ### Inbound
 
@@ -196,9 +196,9 @@ const getMessageFromRequestBody = async (body) => {
 *Outbounds* handle WebSocket connections thanks to [Socket.IO](https://socket.io/), and are composed by:
 
 - a *version* (String, non-empty);
-- and a *function* that returns a user id via a promise given a token.
+- and a *function* that returns a listener id via a promise given a token.
 
-User ids must be **only one of the following JSON literals**:
+Listener ids must be **only one of the following JSON literals**:
 
 - Number (e.g. `42` or `3.14159`);
 - String, non-empty (e.g. `"foobar"`).
@@ -237,7 +237,7 @@ const socket = io(url, { query: { v: version } })
 #### Possible received WebSocket events
 
 - `error` if a namespace has been provided, or if no version has been provided in the handshake query parameters, or if the provided version if not handled;
-- `alert` if the authentication timeout has been reached, or if a user id could not be found given the provided token, or if no criteria could get built given the user id.
+- `alert` if the authentication timeout has been reached, or if a listener id could not be found given the provided token, or if no criteria could get built given the listener id.
 
 Any of the above events **will disconnect the client**.
 
@@ -291,7 +291,7 @@ Optional, the `options` object to pass to [Redis `redis.createClient(...)` funct
 
 **Required**, the timeout for WebSocket connections to authenticate.
 
-### bow.middleware(version, getUserCriteriaByUserId)
+### bow.middleware(version, getCriteriaByListenerId)
 
 Registers a new middleware.
 
@@ -299,9 +299,9 @@ Registers a new middleware.
 
 The version of this middleware, must be unique between all middlewares.
 
-#### getUserCriteriaByUserId
+#### getCriteriaByListenerId
 
-A function that takes one single `userId` argument, and returns a promise resolved with the corresponding user criteria.
+A function that takes one single `listenerId` argument, and returns a promise resolved with the corresponding listener criteria.
 
 ### bow.inbound(path, getMessageFromRequestBody, middlewareVersion)
 
@@ -323,7 +323,7 @@ A function that takes one single `body` argument as found in the HTTP request bo
 
 The middleware version to use to resolve the audiences found in pushed messages.
 
-### bow.outbound(version, getUserIdByToken, middlewareVersion)
+### bow.outbound(version, getListenerIdByToken, middlewareVersion)
 
 Registers a new outbound.
 
@@ -331,13 +331,13 @@ Registers a new outbound.
 
 The version of this outbound, must be unique between all outbounds.
 
-#### getUserIdByToken
+#### getListenerIdByToken
 
-A function that takes one single `token` argument (the one provided when authenticating a WebSocket connection), and returns a promise resolved with the corresponding user id.
+A function that takes one single `token` argument (the one provided when authenticating a WebSocket connection), and returns a promise resolved with the corresponding listener id.
 
 #### middlewareVersion
 
-The middleware version to use to resolve the user from the id retrieved thanks to the token.
+The middleware version to use to resolve the listener from the id retrieved thanks to the token.
 
 ## Example
 
@@ -345,7 +345,7 @@ Following example uses [JWT](https://jwt.io/) for generating tokens, and a relat
 
 ### Database
 
-Table `user`:
+Table `listener`:
 
 ```text
 +----+----------+--------+---------+
@@ -366,16 +366,16 @@ const Bow = require("bow");
  * middleware configuration:
  */
 
-const getUserCriteriaByUserId = async (id) => {
-  const results = await dbConnection.query("SELECT * FROM user WHERE id = ?", id);
+const getCriteriaByListenerId = async (id) => {
+  const results = await dbConnection.query("SELECT * FROM listener WHERE id = ?", id);
   if (1 === results.length) {
-    const user = result[0];
+    const listener = result[0];
     return {
-      role: user["role"],
-      blogId: user["blog_id"]
+      role: listener["role"],
+      blogId: listener["blog_id"]
     };
   } else {
-    throw new Error(`Expected one result for user id '${id}', but got ${results.length}`);
+    throw new Error(`Expected one result for listener id '${id}', but got ${results.length}`);
   }
 };
 
@@ -396,9 +396,9 @@ const getMessageFromRequestBody = async (body) => ({
 // shared with auth server that created the token:
 const PRIVATE_KEY = "thisisatopsecretkey";
 
-const getUserIdFromToken = async (token) => {
+const getListenerIdFromToken = async (token) => {
   const payload = jwt.decrypt(token, PRIVATE_KEY);
-  return payload.userId;
+  return payload.listenerId;
 };
 
 /*
@@ -420,9 +420,9 @@ const getUserIdFromToken = async (token) => {
  };
 
 const bow = new Bow(config)
-  .middleware("v1.1", getUserCriteriaByUserId)
+  .middleware("v1.1", getCriteriaByListenerId)
   .inbound("/v1.2/messages", getMessageFromRequestBody, "v1.1")
-  .outbound("v1.3", getUserIdFromToken, "v1.1");
+  .outbound("v1.3", getListenerIdFromToken, "v1.1");
 
 bow.start().then(() => {
   console.log("Ready!");
