@@ -260,7 +260,7 @@ These variables can be easily set thanks to [cross-env](https://www.npmjs.com/pa
 
 ### new Bow(config)
 
-Creates a new `Bow` instance, expected one `config` object argument:
+Creates a new `Bow` instance, expects one `config` object argument:
 
 #### config.port
 
@@ -292,27 +292,27 @@ Optional, the `options` object to pass to [Redis `redis.createClient(...)` funct
 
 ### bow.middleware(config)
 
-Registers a new middleware.
+Registers a new middleware, expects one `config` object argument:
 
 #### config.version
 
-The version of this middleware, must be unique between all middlewares.
+**Required**, the version of this middleware, must be unique between all middlewares.
 
 #### config.getCriteriaFromListenerId
 
-A function that takes one single `listenerId` argument, and returns a promise resolved with the corresponding listener criteria.
+**Required**, a function that takes one single `listenerId` argument, and returns a promise resolved with the corresponding listener criteria.
 
 ### bow.inbound(config)
 
-Registers a new inbound.
+Registers a new inbound, expects one `config` object argument:
 
 #### config.path
 
-The path of this inbound, must be unique between all inbounds. This path will then be passed to Koa router, **mapped to the HTTP method `POST`**. **The path cannot be `/health`**, as it is reserved for health check (returns an empty `200` response).
+**Required**, the path of this inbound, must be unique between all inbounds. This path will then be passed to Koa router, **mapped to the HTTP method `POST`**. **The path cannot be `/health`**, as it is reserved for health check (returns an empty `200` response).
 
 #### config.getMessageFromRequestBody
 
-A function that takes one single `body` argument as found in the HTTP request body, and returns a promise resolved with a *message* object, defined by:
+**Required**, a function that takes one single `body` argument as found in the HTTP request body, and returns a promise resolved with a *message* object, defined by:
 
 - a `name` property, that will be the `eventName` parameter passed to [Socket.IO `socket.emit(...)`](https://socket.io/docs/emit-cheatsheet/);
 - a `payload` property, that will be the `eventPayload`parameter passed to [Socket.IO `socket.emit(...)`](https://socket.io/docs/emit-cheatsheet/);
@@ -320,23 +320,23 @@ A function that takes one single `body` argument as found in the HTTP request bo
 
 #### config.middlewareVersion
 
-The middleware version to use to resolve the audiences found in pushed messages.
+**Required**, the middleware version to use to resolve the audiences found in pushed messages.
 
 ### bow.outbound(config)
 
-Registers a new outbound.
+Registers a new outbound, expects one `config` object argument:
 
 #### config.version
 
-The version of this outbound, must be unique between all outbounds.
+**Required**, the version of this outbound, must be unique between all outbounds.
 
 #### config.getListenerIdFromToken
 
-A function that takes one single `token` argument (the one provided when authenticating a WebSocket connection), and returns a promise resolved with the corresponding listener id.
+**Required**, a function that takes one single `token` argument (the one provided when authenticating a WebSocket connection), and returns a promise resolved with the corresponding listener id.
 
 #### config.middlewareVersion
 
-The middleware version to use to resolve the listener from the id retrieved thanks to the token.
+**Required**, the middleware version to use to resolve the listener from the id retrieved thanks to the token.
 
 ## Example
 
