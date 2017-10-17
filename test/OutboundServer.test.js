@@ -26,16 +26,16 @@ describe("OutboundServer", () => {
     stopServer = await new Bow(config)
       .middleware({
         version: "v1",
-        getCriteriaFromListenerId: () => {} // eslint-disable-line no-empty-function
+        createCriteriaFromListenerDetails: () => {} // eslint-disable-line no-empty-function
       })
       .inbound({
         path: "/v1",
-        getMessageFromRequestBody: () => {}, // eslint-disable-line no-empty-function
+        createMessageFromRequestBody: () => {}, // eslint-disable-line no-empty-function
         middlewareVersion: "v1"
       })
       .outbound({
         version: "v1",
-        getListenerIdFromToken: async (token) => {
+        createListenerDetailsFromToken: async (token) => {
           throw new Error(`Invalid token: '${token}'`);
         },
         middlewareVersion: "v1"

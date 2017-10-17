@@ -94,7 +94,7 @@ The purpose of *middlewares* is to resolve an audience so that holding message c
 A middleware is composed by:
 
 - a *version* (String, non-empty);
-- and a *function*, that returns *criteria* via a promise given a listener id.
+- and a *function*, that creates *criteria* given a *listener's details* via a promise.
 
 #### Criterion
 
@@ -154,7 +154,7 @@ Messages are pushed via *inbounds*, which are basically HTTP endpoints built tha
 An inbound is composed by:
 
 - a *path* (String, non-empty), **mapped to the HTTP method `POST`**;
-- and a *function*, that transforms a request body into a message via a promise.
+- and a *function*, that creates a *message* given a *request body* via a promise.
 
 For example, given the following message:
 
@@ -173,8 +173,8 @@ For example, given the following message:
 The function could be:
 
 ```js
-const getMessageFromRequestBody = async (body) => {
-  await validateMessageBody(body);
+const createMessageFromRequestBody = async (body) => {
+  await validateRequestBody(body);
   return {
     name: body.name,
     payload: body,
@@ -196,9 +196,9 @@ const getMessageFromRequestBody = async (body) => {
 *Outbounds* handle WebSocket connections thanks to [Socket.IO](https://socket.io/), and are composed by:
 
 - a *version* (String, non-empty);
-- and a *function* that returns a listener id via a promise given a token.
+- and a *function* that creates a *listener's details* given a *token* via a promise.
 
-Listener ids must be **only one of the following JSON literals**:
+A listener's details should be an object that has at least one `id` property, holding a value of **only one of the following JSON literals**:
 
 - Number (e.g. `42` or `3.14159`);
 - String, non-empty (e.g. `"foobar"`).
@@ -209,7 +209,7 @@ When connecting to an outbound, the client must provide the outbound version it 
 
 If an error occurred in the authentication process, Bow will first send an `alert` event with an explanation, **and will then disconnect the client**.
 
-For example:
+For example, client-side:
 
 ```js
 const io = require("socket.io-client");
@@ -298,7 +298,7 @@ Registers a new middleware, expects one `config` object argument:
 
 **Required**, the version of this middleware, must be unique between all middlewares.
 
-#### config.getCriteriaFromListenerId
+#### config.createCriteriaFromListenerDetails
 
 **Required**, a function that takes one single `listenerId` argument, and returns a promise resolved with the corresponding listener criteria.
 
@@ -310,7 +310,7 @@ Registers a new inbound, expects one `config` object argument:
 
 **Required**, the path of this inbound, must be unique between all inbounds. This path will then be passed to Koa router, **mapped to the HTTP method `POST`**. **The path cannot be `/health`**, as it is reserved for health check (returns an empty `200` response).
 
-#### config.getMessageFromRequestBody
+#### config.createMessageFromRequestBody
 
 **Required**, a function that takes one single `body` argument as found in the HTTP request body, and returns a promise resolved with a *message* object, defined by:
 
@@ -330,9 +330,9 @@ Registers a new outbound, expects one `config` object argument:
 
 **Required**, the version of this outbound, must be unique between all outbounds.
 
-#### config.getListenerIdFromToken
+#### config.createListenerDetailsFromToken
 
-**Required**, a function that takes one single `token` argument (the one provided when authenticating a WebSocket connection), and returns a promise resolved with the corresponding listener id.
+**Required**, a function that takes one single `token` argument (the one provided when authenticating a WebSocket connection), and returns a promise resolved with the corresponding listener details.
 
 #### config.middlewareVersion
 
@@ -365,8 +365,8 @@ const Bow = require("bow");
  * middleware configuration:
  */
 
-const getCriteriaFromListenerId = async (id) => {
-  const results = await dbConnection.query("SELECT * FROM listener WHERE id = ?", id);
+const createCriteriaFromListenerDetails = async (listenerDetails) => {
+  const results = await dbConnection.query("SELECT * FROM listener WHERE id = ?", listenerDetails.id);
   if (1 === results.length) {
     const listener = result[0];
     return {
@@ -374,7 +374,7 @@ const getCriteriaFromListenerId = async (id) => {
       blogId: listener["blog_id"]
     };
   } else {
-    throw new Error(`Expected one result for listener id '${id}', but got ${results.length}`);
+    throw new Error(`Expected one result for listener id '${listenerDetails.id}', but got ${results.length}`);
   }
 };
 
@@ -382,7 +382,7 @@ const getCriteriaFromListenerId = async (id) => {
  * inbound configuration:
  */
 
-const getMessageFromRequestBody = async (body) => ({
+const createMessageFromRequestBody = async (body) => ({
   name: body.name,
   payload: body,
   audience: body.audience
@@ -395,9 +395,11 @@ const getMessageFromRequestBody = async (body) => ({
 // shared with auth server that created the token:
 const PRIVATE_KEY = "thisisatopsecretkey";
 
-const getListenerIdFromToken = async (token) => {
+const createListenerDetailsFromToken = async (token) => {
   const payload = jwt.decrypt(token, PRIVATE_KEY);
-  return payload.listenerId;
+  return {
+    id: payload.listenerId
+  };
 };
 
 /*
@@ -421,16 +423,16 @@ const getListenerIdFromToken = async (token) => {
 const bow = new Bow(config)
   .middleware({
     version: "v1.1",
-    getCriteriaFromListenerId
+    createCriteriaFromListenerDetails
   })
   .inbound({
     path: "/v1.2/messages",
-    getMessageFromRequestBody,
+    createMessageFromRequestBody,
     middlewareVersion: "v1.1"
   })
   .outbound({
     version: "v1.3",
-    getListenerIdFromToken,
+    createListenerDetailsFromToken,
     middlewareVersion: "v1.1"
   });
 
