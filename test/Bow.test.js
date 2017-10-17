@@ -40,18 +40,18 @@ const checkState = async (message, bowDecorator) => {
 
 const createValidMiddleware = (version) => ({
   version,
-  getCriteriaFromListenerDetails: () => {} // eslint-disable-line no-empty-function
+  createCriteriaFromListenerDetails: () => {} // eslint-disable-line no-empty-function
 });
 
 const createValidInbound = (version) => ({
   path: version,
-  getMessageFromRequestBody: () => {}, // eslint-disable-line no-empty-function
+  createMessageFromRequestBody: () => {}, // eslint-disable-line no-empty-function
   middlewareVersion: version
 });
 
 const createValidOutbound = (version) => ({
   version,
-  getListenerDetailsFromToken: () => {}, // eslint-disable-line no-empty-function
+  createListenerDetailsFromToken: () => {}, // eslint-disable-line no-empty-function
   middlewareVersion: version
 });
 
@@ -178,8 +178,8 @@ describe("Bow middleware", () => {
     checkState("Expected middleware's version to be a non empty string", (bow) => bow
       .middleware({})));
 
-  it("should fail if getCriteriaFromListenerDetails is not a function", async () =>
-    checkState("Expected middleware's getCriteriaFromListenerDetails to be a function", (bow) => bow
+  it("should fail if createCriteriaFromListenerDetails is not a function", async () =>
+    checkState("Expected middleware's createCriteriaFromListenerDetails to be a function", (bow) => bow
       .middleware({
         version: "v1"
       })));
@@ -224,8 +224,8 @@ describe("Bow inbound", () => {
         path: "/health"
       })));
 
-  it("should fail if getMessageFromRequestBody is not a function", async () =>
-    checkState("Expected inbound's getMessageFromRequestBody to be a function", (bow) => bow
+  it("should fail if createMessageFromRequestBody is not a function", async () =>
+    checkState("Expected inbound's createMessageFromRequestBody to be a function", (bow) => bow
       .inbound({
         path: "v1"
       })));
@@ -234,7 +234,7 @@ describe("Bow inbound", () => {
     checkState("Expected inbound's middlewareVersion to be a non empty string", (bow) => bow
       .inbound({
         path: "v1",
-        getMessageFromRequestBody: () => {} // eslint-disable-line no-empty-function
+        createMessageFromRequestBody: () => {} // eslint-disable-line no-empty-function
       })));
 
   it("should fail if none is registered", async () =>
@@ -267,8 +267,8 @@ describe("Bow outbound", () => {
     checkState("Expected outbound's version to be a non empty string", (bow) => bow
       .outbound({})));
 
-  it("should fail if getListenerDetailsFromToken is not a function", async () =>
-    checkState("Expected outbound's getListenerDetailsFromToken to be a function", (bow) => bow
+  it("should fail if createListenerDetailsFromToken is not a function", async () =>
+    checkState("Expected outbound's createListenerDetailsFromToken to be a function", (bow) => bow
       .outbound({
         version: "v1"
       })));
@@ -277,7 +277,7 @@ describe("Bow outbound", () => {
     checkState("Expected outbound's middlewareVersion to be a non empty string", (bow) => bow
       .outbound({
         version: "v1",
-        getListenerDetailsFromToken: () => {} // eslint-disable-line no-empty-function
+        createListenerDetailsFromToken: () => {} // eslint-disable-line no-empty-function
       })));
 
   it("should fail if none is registered", async () =>

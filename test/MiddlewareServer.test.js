@@ -65,7 +65,7 @@ const buildServer = (port, options) => {
   return new Bow(serverConfig)
     .middleware({
       version: "v1",
-      getCriteriaFromListenerDetails: async (listenerDetails) => {
+      createCriteriaFromListenerDetails: async (listenerDetails) => {
         listenerDetails.foo.should.equal("bar");
         const listener = clone(criteriaByListenersId[listenerDetails.id]);
         if (check.not.assigned(listener)) {
@@ -76,7 +76,7 @@ const buildServer = (port, options) => {
     })
     .inbound({
       path: "/messages",
-      getMessageFromRequestBody: async (payload) => ({
+      createMessageFromRequestBody: async (payload) => ({
         name: payload.name,
         payload,
         audience: payload.audience
@@ -85,7 +85,7 @@ const buildServer = (port, options) => {
     })
     .outbound({
       version: "v1",
-      getListenerDetailsFromToken: async (token) => {
+      createListenerDetailsFromToken: async (token) => {
         const listenerId = listenerIdsByToken[token];
         if (check.not.assigned(listenerId)) {
           throw new Error(`Invalid token: '${token}'`);
@@ -240,7 +240,7 @@ describe("MiddlewareServer with multiple middlewares", () => {
 
   const SERVER_PORT = 3000;
 
-  const getCriteriaFromListenerDetails = async (listenerDetails) => {
+  const createCriteriaFromListenerDetails = async (listenerDetails) => {
     listenerDetails.foo.should.equal("bar");
     const listener = criteriaByListenersId[listenerDetails.id];
     if (check.not.assigned(listener)) {
@@ -249,13 +249,13 @@ describe("MiddlewareServer with multiple middlewares", () => {
     return listener;
   };
 
-  const getMessageFromRequestBody = async (payload) => ({
+  const createMessageFromRequestBody = async (payload) => ({
     name: payload.name,
     payload,
     audience: payload.audience
   });
 
-  const getListenerDetailsFromToken = async (token) => {
+  const createListenerDetailsFromToken = async (token) => {
     const listenerId = listenerIdsByToken[token];
     if (check.not.assigned(listenerId)) {
       throw new Error(`Invalid token: '${token}'`);
@@ -275,30 +275,30 @@ describe("MiddlewareServer with multiple middlewares", () => {
     serverStoppers.push(await new Bow(serverConfig)
       .middleware({
         version: "v1",
-        getCriteriaFromListenerDetails
+        createCriteriaFromListenerDetails
       })
       .middleware({
         version: "v2",
-        getCriteriaFromListenerDetails
+        createCriteriaFromListenerDetails
       })
       .inbound({
         path: "/v1/messages",
-        getMessageFromRequestBody,
+        createMessageFromRequestBody,
         middlewareVersion: "v1"
       })
       .inbound({
         path: "/v2/messages",
-        getMessageFromRequestBody,
+        createMessageFromRequestBody,
         middlewareVersion: "v2"
       })
       .outbound({
         version: "v1",
-        getListenerDetailsFromToken,
+        createListenerDetailsFromToken,
         middlewareVersion: "v1"
       })
       .outbound({
         version: "v2",
-        getListenerDetailsFromToken,
+        createListenerDetailsFromToken,
         middlewareVersion: "v2"
       })
       .start());
