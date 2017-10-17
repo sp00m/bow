@@ -11,19 +11,22 @@ const request = require("supertest");
 const Bow = require("../");
 
 const ADMIN1_TOKEN = "ADMIN1_TOKEN";
+const ADMIN2_TOKEN = "ADMIN2_TOKEN";
 const AUTHOR1_TOKEN = "AUTHOR1_TOKEN";
 const AUTHOR2_TOKEN = "AUTHOR2_TOKEN";
 const AUTHOR3_TOKEN = "AUTHOR3_TOKEN";
 const AUTHOR4_TOKEN = "AUTHOR4_TOKEN";
 
 const ADMIN1_ID = 1;
-const AUTHOR1_ID = 2;
-const AUTHOR2_ID = 3;
-const AUTHOR3_ID = 4;
-const AUTHOR4_ID = 5;
+const ADMIN2_ID = 2;
+const AUTHOR1_ID = 3;
+const AUTHOR2_ID = 4;
+const AUTHOR3_ID = 5;
+const AUTHOR4_ID = 6;
 
 const listenerIdsByToken = {
   [ADMIN1_TOKEN]: ADMIN1_ID,
+  [ADMIN2_TOKEN]: ADMIN2_ID,
   [AUTHOR1_TOKEN]: AUTHOR1_ID,
   [AUTHOR2_TOKEN]: AUTHOR2_ID,
   [AUTHOR3_TOKEN]: AUTHOR3_ID,
@@ -32,6 +35,7 @@ const listenerIdsByToken = {
 
 const listenersById = {
   [ADMIN1_ID]: { role: "admin" },
+  [ADMIN2_ID]: { role: ["admin", "admin"] },
   [AUTHOR1_ID]: { role: "author", blogId: 1 },
   [AUTHOR2_ID]: { role: "author", blogId: 2 },
   [AUTHOR3_ID]: { role: "author", blogId: [1, 2] },
@@ -201,6 +205,15 @@ describe("MiddlewareServer", () => {
     ));
   })).then((messagePromiseGetter) =>
     pushMessage("http", SERVER_PORT, "/messages", complexMessage, messagePromiseGetter)
+  ));
+
+  it("should handle duplicated criteria", () => new Promise((connectionSucceeded, connectionFailed) => {
+    sockets.push(createSocketExpectingMessage(
+      "http", SERVER_PORT, 1, ADMIN2_TOKEN, simpleMessage,
+      connectionSucceeded, connectionFailed
+    ));
+  }).then((messagePromiseGetter) =>
+    pushMessage("http", SERVER_PORT, "/messages", simpleMessage, messagePromiseGetter)
   ));
 
   it("should handle same listener connected multiple times", () => new Promise((connectionSucceeded, connectionFailed) => {
