@@ -40,7 +40,7 @@ const checkState = async (message, bowDecorator) => {
 
 const createValidMiddleware = (version) => ({
   version,
-  getCriteriaFromListenerId: () => {} // eslint-disable-line no-empty-function
+  getCriteriaFromListenerDetails: () => {} // eslint-disable-line no-empty-function
 });
 
 const createValidInbound = (version) => ({
@@ -51,7 +51,7 @@ const createValidInbound = (version) => ({
 
 const createValidOutbound = (version) => ({
   version,
-  getListenerIdFromToken: () => {}, // eslint-disable-line no-empty-function
+  getListenerDetailsFromToken: () => {}, // eslint-disable-line no-empty-function
   middlewareVersion: version
 });
 
@@ -178,8 +178,8 @@ describe("Bow middleware", () => {
     checkState("Expected middleware's version to be a non empty string", (bow) => bow
       .middleware({})));
 
-  it("should fail if getCriteriaFromListenerId is not a function", async () =>
-    checkState("Expected middleware's getCriteriaFromListenerId to be a function", (bow) => bow
+  it("should fail if getCriteriaFromListenerDetails is not a function", async () =>
+    checkState("Expected middleware's getCriteriaFromListenerDetails to be a function", (bow) => bow
       .middleware({
         version: "v1"
       })));
@@ -267,8 +267,8 @@ describe("Bow outbound", () => {
     checkState("Expected outbound's version to be a non empty string", (bow) => bow
       .outbound({})));
 
-  it("should fail if getListenerIdFromToken is not a function", async () =>
-    checkState("Expected outbound's getListenerIdFromToken to be a function", (bow) => bow
+  it("should fail if getListenerDetailsFromToken is not a function", async () =>
+    checkState("Expected outbound's getListenerDetailsFromToken to be a function", (bow) => bow
       .outbound({
         version: "v1"
       })));
@@ -277,7 +277,7 @@ describe("Bow outbound", () => {
     checkState("Expected outbound's middlewareVersion to be a non empty string", (bow) => bow
       .outbound({
         version: "v1",
-        getListenerIdFromToken: () => {} // eslint-disable-line no-empty-function
+        getListenerDetailsFromToken: () => {} // eslint-disable-line no-empty-function
       })));
 
   it("should fail if none is registered", async () =>

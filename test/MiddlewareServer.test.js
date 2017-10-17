@@ -33,7 +33,7 @@ const listenerIdsByToken = {
   [AUTHOR4_TOKEN]: AUTHOR4_ID
 };
 
-const listenersById = {
+const criteriaByListenersId = {
   [ADMIN1_ID]: { role: "admin" },
   [ADMIN2_ID]: { role: ["admin", "admin"] },
   [AUTHOR1_ID]: { role: "author", blogId: 1 },
@@ -65,10 +65,11 @@ const buildServer = (port, options) => {
   return new Bow(serverConfig)
     .middleware({
       version: "v1",
-      getCriteriaFromListenerId: async (listenerId) => {
-        const listener = clone(listenersById[listenerId]);
+      getCriteriaFromListenerDetails: async (listenerDetails) => {
+        listenerDetails.foo.should.equal("bar");
+        const listener = clone(criteriaByListenersId[listenerDetails.id]);
         if (check.not.assigned(listener)) {
-          throw new Error(`Invalid listener id: '${listenerId}'`);
+          throw new Error(`Invalid listener id: '${listenerDetails.id}'`);
         }
         return listener;
       }
@@ -84,12 +85,15 @@ const buildServer = (port, options) => {
     })
     .outbound({
       version: "v1",
-      getListenerIdFromToken: async (token) => {
+      getListenerDetailsFromToken: async (token) => {
         const listenerId = listenerIdsByToken[token];
         if (check.not.assigned(listenerId)) {
           throw new Error(`Invalid token: '${token}'`);
         }
-        return listenerId;
+        return {
+          id: listenerId,
+          foo: "bar"
+        };
       },
       middlewareVersion: "v1"
     });
@@ -236,10 +240,11 @@ describe("MiddlewareServer with multiple middlewares", () => {
 
   const SERVER_PORT = 3000;
 
-  const getCriteriaFromListenerId = async (listenerId) => {
-    const listener = listenersById[listenerId];
+  const getCriteriaFromListenerDetails = async (listenerDetails) => {
+    listenerDetails.foo.should.equal("bar");
+    const listener = criteriaByListenersId[listenerDetails.id];
     if (check.not.assigned(listener)) {
-      throw new Error(`Invalid listener id: '${listenerId}'`);
+      throw new Error(`Invalid listener id: '${listenerDetails.id}'`);
     }
     return listener;
   };
@@ -250,12 +255,15 @@ describe("MiddlewareServer with multiple middlewares", () => {
     audience: payload.audience
   });
 
-  const getListenerIdFromToken = async (token) => {
+  const getListenerDetailsFromToken = async (token) => {
     const listenerId = listenerIdsByToken[token];
     if (check.not.assigned(listenerId)) {
       throw new Error(`Invalid token: '${token}'`);
     }
-    return listenerId;
+    return {
+      id: listenerId,
+      foo: "bar"
+    };
   };
 
   const serverStoppers = [];
@@ -267,11 +275,11 @@ describe("MiddlewareServer with multiple middlewares", () => {
     serverStoppers.push(await new Bow(serverConfig)
       .middleware({
         version: "v1",
-        getCriteriaFromListenerId
+        getCriteriaFromListenerDetails
       })
       .middleware({
         version: "v2",
-        getCriteriaFromListenerId
+        getCriteriaFromListenerDetails
       })
       .inbound({
         path: "/v1/messages",
@@ -285,12 +293,12 @@ describe("MiddlewareServer with multiple middlewares", () => {
       })
       .outbound({
         version: "v1",
-        getListenerIdFromToken,
+        getListenerDetailsFromToken,
         middlewareVersion: "v1"
       })
       .outbound({
         version: "v2",
-        getListenerIdFromToken,
+        getListenerDetailsFromToken,
         middlewareVersion: "v2"
       })
       .start());
@@ -426,9 +434,9 @@ describe("MiddlewareServer with Redis", () => {
       connectionSucceeded, connectionFailed
     ));
   }).then((messagePromiseGetter) => new Promise((connectionSucceeded, connectionFailed) => {
-    listenersById[ADMIN1_ID].role = "author";
+    criteriaByListenersId[ADMIN1_ID].role = "author";
     reverters.push(() => {
-      listenersById[ADMIN1_ID].role = "admin";
+      criteriaByListenersId[ADMIN1_ID].role = "admin";
     });
     sockets.push(createSocketNotExpectingMessage(
       "http", SECOND_SERVER_PORT, 1, ADMIN1_TOKEN, simpleMessage,

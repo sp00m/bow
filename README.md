@@ -94,7 +94,7 @@ The purpose of *middlewares* is to resolve an audience so that holding message c
 A middleware is composed by:
 
 - a *version* (String, non-empty);
-- and a *function*, that returns *criteria* via a promise given a listener id.
+- and a *function*, that returns *criteria* via a promise given a listener's details.
 
 #### Criterion
 
@@ -196,9 +196,9 @@ const getMessageFromRequestBody = async (body) => {
 *Outbounds* handle WebSocket connections thanks to [Socket.IO](https://socket.io/), and are composed by:
 
 - a *version* (String, non-empty);
-- and a *function* that returns a listener id via a promise given a token.
+- and a *function* that returns a listener's details via a promise given a token.
 
-Listener ids must be **only one of the following JSON literals**:
+Listener details should be an object that has at least one `id` property, holding a value of **only one of the following JSON literals**:
 
 - Number (e.g. `42` or `3.14159`);
 - String, non-empty (e.g. `"foobar"`).
@@ -209,7 +209,7 @@ When connecting to an outbound, the client must provide the outbound version it 
 
 If an error occurred in the authentication process, Bow will first send an `alert` event with an explanation, **and will then disconnect the client**.
 
-For example:
+For example, client-side:
 
 ```js
 const io = require("socket.io-client");
@@ -298,7 +298,7 @@ Registers a new middleware, expects one `config` object argument:
 
 **Required**, the version of this middleware, must be unique between all middlewares.
 
-#### config.getCriteriaFromListenerId
+#### config.getCriteriaFromListenerDetails
 
 **Required**, a function that takes one single `listenerId` argument, and returns a promise resolved with the corresponding listener criteria.
 
@@ -330,9 +330,9 @@ Registers a new outbound, expects one `config` object argument:
 
 **Required**, the version of this outbound, must be unique between all outbounds.
 
-#### config.getListenerIdFromToken
+#### config.getListenerDetailsFromToken
 
-**Required**, a function that takes one single `token` argument (the one provided when authenticating a WebSocket connection), and returns a promise resolved with the corresponding listener id.
+**Required**, a function that takes one single `token` argument (the one provided when authenticating a WebSocket connection), and returns a promise resolved with the corresponding listener details.
 
 #### config.middlewareVersion
 
@@ -365,7 +365,7 @@ const Bow = require("bow");
  * middleware configuration:
  */
 
-const getCriteriaFromListenerId = async (id) => {
+const getCriteriaFromListenerDetails = async (id) => {
   const results = await dbConnection.query("SELECT * FROM listener WHERE id = ?", id);
   if (1 === results.length) {
     const listener = result[0];
@@ -395,7 +395,7 @@ const getMessageFromRequestBody = async (body) => ({
 // shared with auth server that created the token:
 const PRIVATE_KEY = "thisisatopsecretkey";
 
-const getListenerIdFromToken = async (token) => {
+const getListenerDetailsFromToken = async (token) => {
   const payload = jwt.decrypt(token, PRIVATE_KEY);
   return payload.listenerId;
 };
@@ -421,7 +421,7 @@ const getListenerIdFromToken = async (token) => {
 const bow = new Bow(config)
   .middleware({
     version: "v1.1",
-    getCriteriaFromListenerId
+    getCriteriaFromListenerDetails
   })
   .inbound({
     path: "/v1.2/messages",
@@ -430,7 +430,7 @@ const bow = new Bow(config)
   })
   .outbound({
     version: "v1.3",
-    getListenerIdFromToken,
+    getListenerDetailsFromToken,
     middlewareVersion: "v1.1"
   });
 
