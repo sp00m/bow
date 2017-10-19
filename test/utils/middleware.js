@@ -60,7 +60,7 @@ const buildServer = (port, options = {}) => {
   return new Bow(serverConfig)
     .middleware({
       version: "v1",
-      createCriteriaFromListenerDetails: async (listenerDetails) => {
+      createCriteriaFromListenerDetails: (listenerDetails) => {
         listenerDetails.foo.should.equal("bar");
         const listener = clone(criteriaByListenersId[listenerDetails.id]);
         if (check.not.assigned(listener)) {
@@ -71,7 +71,7 @@ const buildServer = (port, options = {}) => {
     })
     .inbound({
       path: "/messages",
-      createMessageFromRequestBody: async (payload) => ({
+      createMessageFromRequestBody: (payload) => ({
         name: payload.name,
         payload,
         audience: payload.audience
@@ -80,7 +80,7 @@ const buildServer = (port, options = {}) => {
     })
     .outbound({
       version: "v1",
-      createListenerDetailsFromToken: async (token) => {
+      createListenerDetailsFromToken: (token) => {
         const listenerId = listenerIdsByToken[token];
         if (check.not.assigned(listenerId)) {
           throw new Error(`Invalid token: '${token}'`);

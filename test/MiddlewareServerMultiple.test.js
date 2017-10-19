@@ -20,7 +20,7 @@ describe("MiddlewareServer with multiple middlewares", () => {
 
   const serverPort = 3000;
 
-  const createCriteriaFromListenerDetails = async (listenerDetails) => {
+  const createCriteriaFromListenerDetails = (listenerDetails) => {
     listenerDetails.foo.should.equal("bar");
     const listener = criteriaByListenersId[listenerDetails.id];
     if (check.not.assigned(listener)) {
@@ -29,13 +29,13 @@ describe("MiddlewareServer with multiple middlewares", () => {
     return listener;
   };
 
-  const createMessageFromRequestBody = async (payload) => ({
+  const createMessageFromRequestBody = (payload) => ({
     name: payload.name,
     payload,
     audience: payload.audience
   });
 
-  const createListenerDetailsFromToken = async (token) => {
+  const createListenerDetailsFromToken = (token) => {
     const listenerId = listenerIdsByToken[token];
     if (check.not.assigned(listenerId)) {
       throw new Error(`Invalid token: '${token}'`);

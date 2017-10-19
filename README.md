@@ -94,7 +94,7 @@ The purpose of *middlewares* is to resolve an audience so that holding message c
 A middleware is composed by:
 
 - a *version* (String, non-empty);
-- and a *function*, that creates *criteria* given a *listener's details* via a promise.
+- and a *function*, that creates *criteria* given a *listener's details*, possibly via a promise.
 
 #### Criterion
 
@@ -154,7 +154,7 @@ Messages are pushed via *inbounds*, which are basically HTTP endpoints built tha
 An inbound is composed by:
 
 - a *path* (String, non-empty), **mapped to the HTTP method `POST`**;
-- and a *function*, that creates a *message* given a *request body* via a promise.
+- and a *function*, that creates a *message* given a *request body*, possibly via a promise.
 
 For example, given the following message:
 
@@ -196,7 +196,7 @@ const createMessageFromRequestBody = async (body) => {
 *Outbounds* handle WebSocket connections thanks to [Socket.IO](https://socket.io/), and are composed by:
 
 - a *version* (String, non-empty);
-- and a *function* that creates a *listener's details* given a *token* via a promise.
+- and a *function* that creates a *listener's details* given a *token*, possibly via a promise.
 
 A listener's details should be an object that has at least one `id` property, holding a value of **only one of the following JSON literals**:
 
@@ -306,7 +306,7 @@ Registers a new middleware, expects one `config` object argument:
 
 #### config.createCriteriaFromListenerDetails
 
-**Required**, a function that takes one single `listenerId` argument, and returns a promise resolved with the corresponding listener criteria.
+**Required**, a function that takes one single `listenerId` argument, and returns the corresponding listener criteria, possibly via a promise.
 
 ### bow.inbound(config)
 
@@ -318,7 +318,7 @@ Registers a new inbound, expects one `config` object argument:
 
 #### config.createMessageFromRequestBody
 
-**Required**, a function that takes one single `body` argument as found in the HTTP request body, and returns a promise resolved with a *message* object, defined by:
+**Required**, a function that takes one single `body` argument as found in the HTTP request body, and returns a *message* object, possibly via a promise, defined by:
 
 - a `name` property, that will be the `eventName` parameter passed to [Socket.IO `socket.emit(...)`](https://socket.io/docs/emit-cheatsheet/);
 - a `payload` property, that will be the `eventPayload`parameter passed to [Socket.IO `socket.emit(...)`](https://socket.io/docs/emit-cheatsheet/);
@@ -338,7 +338,7 @@ Registers a new outbound, expects one `config` object argument:
 
 #### config.createListenerDetailsFromToken
 
-**Required**, a function that takes one single `token` argument (the one provided when authenticating a WebSocket connection), and returns a promise resolved with the corresponding listener details.
+**Required**, a function that takes one single `token` argument (the one provided when authenticating a WebSocket connection), and returns the corresponding listener details, possibly via a promise.
 
 #### config.middlewareVersion
 
@@ -388,7 +388,7 @@ const createCriteriaFromListenerDetails = async (listenerDetails) => {
  * inbound configuration:
  */
 
-const createMessageFromRequestBody = async (body) => ({
+const createMessageFromRequestBody = (body) => ({
   name: body.name,
   payload: body,
   audience: body.audience
@@ -401,7 +401,7 @@ const createMessageFromRequestBody = async (body) => ({
 // shared with auth server that created the token:
 const PRIVATE_KEY = "thisisatopsecretkey";
 
-const createListenerDetailsFromToken = async (token) => {
+const createListenerDetailsFromToken = (token) => {
   const payload = jwt.decrypt(token, PRIVATE_KEY);
   return {
     id: payload.listenerId
