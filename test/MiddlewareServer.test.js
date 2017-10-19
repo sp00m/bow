@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 
-require("should");
+const should = require("should");
 
 const check = require("check-types");
 const clone = require("clone");
@@ -53,15 +53,11 @@ const config = {
   }
 };
 
-const buildServer = (port, options) => {
+const buildServer = (port, options = {}) => {
   const serverConfig = clone(config);
   serverConfig.port = port;
-  if (options.https) {
-    serverConfig.https = pem;
-  }
-  if (options.redis) {
-    serverConfig.redis = {};
-  }
+  serverConfig.https = options.https;
+  serverConfig.redis = options.redis;
   return new Bow(serverConfig)
     .middleware({
       version: "v1",
@@ -166,7 +162,7 @@ describe("MiddlewareServer", () => {
   const sockets = [];
 
   before(async () => {
-    serverStoppers.push(await buildServer(SERVER_PORT, { https: false, redis: false }).start());
+    serverStoppers.push(await buildServer(SERVER_PORT).start());
   });
 
   afterEach(() => {
@@ -347,7 +343,7 @@ describe("MiddlewareServer with HTTPS", () => {
   });
 
   before(async () => {
-    serverStoppers.push(await buildServer(SERVER_PORT, { https: true, redis: false }).start());
+    serverStoppers.push(await buildServer(SERVER_PORT, { https: pem }).start());
   });
 
   afterEach(() => {
@@ -382,14 +378,15 @@ describe("MiddlewareServer with Redis", () => {
 
   const FIRST_SERVER_PORT = 3000;
   const SECOND_SERVER_PORT = 3001;
+  const THIRD_SERVER_PORT = 3002;
 
   const serverStoppers = [];
   const sockets = [];
   const reverters = [];
 
   before(async () => {
-    serverStoppers.push(await buildServer(FIRST_SERVER_PORT, { https: false, redis: true }).start());
-    serverStoppers.push(await buildServer(SECOND_SERVER_PORT, { https: false, redis: true }).start());
+    serverStoppers.push(await buildServer(FIRST_SERVER_PORT, { redis: {} }).start());
+    serverStoppers.push(await buildServer(SECOND_SERVER_PORT, { redis: {} }).start());
   });
 
   afterEach(() => {
@@ -408,6 +405,20 @@ describe("MiddlewareServer with Redis", () => {
     const listenerCounts = await Promise.all(serverStoppers.map((serverStopper) => serverStopper()));
     serverStoppers.length = 0;
     listenerCounts.reduce((total, listenerCount) => total + listenerCount, 0).should.equal(0);
+  });
+
+  it("should fail if Redis connection is not valid", async () => {
+    let stopServer = undefined;
+    try {
+      stopServer = await buildServer(THIRD_SERVER_PORT, { redis: { port: 404 } }).start();
+    } catch (error) {
+      // expected error
+    } finally {
+      if (check.assigned(stopServer)) {
+        await stopServer();
+        should.fail("Server should have failed starting");
+      }
+    }
   });
 
   it("should resolve audience on distinct instances", () => new Promise((connectionSucceeded, connectionFailed) => {

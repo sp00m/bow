@@ -21,7 +21,7 @@ Bow exposes two main JSON-based APIs to third party:
 - **an HTTP API to push messages**, built on top of [Koa](http://koajs.com/);
 - and **a WebSocket API to receive messages**, built on top of [Socket.IO](https://socket.io/).
 
-To ease horizontal scalability, each Bow instance can connect to a Redis message broker.
+To ease horizontal scalability, each Bow instance can connect to a [Redis message broker](https://redis.io/topics/pubsub) thanks to [ioredis](https://www.npmjs.com/package/ioredis).
 
 Bow is built upon these four main concepts:
 
@@ -272,7 +272,13 @@ Optional, the `options` object to pass to [Node.js `https.createServer(...)` fun
 
 #### config.redis
 
-Optional, the `options` object to pass to [Redis `redis.createClient(...)` function](https://www.npmjs.com/package/redis#rediscreateclient). If this option is not provided, then no message broker will be used, **which makes your server inconsistent if deployed in a clustered environment**.
+Optional, the Redis config.
+
+If this is an object, then it will be passed to [`new Redis(...)`](https://www.npmjs.com/package/ioredis#connect-to-redis).
+
+If this is an array of object, then it will be passed to [`new Redis.Cluster(...)`](https://www.npmjs.com/package/ioredis#cluster).
+
+**Any other value will fail** (e.g. only the port).
 
 #### config.inbound.realm
 
