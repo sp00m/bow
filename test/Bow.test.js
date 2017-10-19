@@ -75,17 +75,24 @@ describe("Bow config", () => {
     }));
 
   it("should fail if config.redis is not an object", () =>
-    checkConfig("config.redis", "an object", {
+    checkConfig("'foobar'", "a Redis config", {
       port: 1,
       https: {},
       redis: "foobar"
+    }));
+
+  it("should fail if config.redis is an array but does not contain objects", () =>
+    checkConfig("'foobar'", "a Redis config", {
+      port: 1,
+      https: {},
+      redis: ["foobar"]
     }));
 
   it("should fail if config.inbound is not an object", () =>
     checkConfig("config.inbound", "an object", {
       port: 1,
       https: {},
-      redis: {},
+      redis: [],
       inbound: "foobar"
     }));
 
@@ -93,7 +100,7 @@ describe("Bow config", () => {
     checkConfig("config.inbound.realm", "a non empty string", {
       port: 1,
       https: {},
-      redis: {},
+      redis: [{}],
       inbound: {
         realm: ""
       }
