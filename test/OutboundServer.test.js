@@ -35,7 +35,7 @@ describe("OutboundServer", () => {
       })
       .outbound({
         version: "v1",
-        createListenerDetailsFromToken: async (token) => {
+        createListenerDetailsFromToken: (token) => {
           throw new Error(`Invalid token: '${token}'`);
         },
         middlewareVersion: "v1"

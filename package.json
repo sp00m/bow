@@ -1,11 +1,15 @@
 {
   "name": "bow",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Broadcast Over WebSocket",
   "keywords": [
     "bow",
+    "server",
+    "http",
     "websocket",
     "microservice",
+    "multitenant",
+    "scalable",
     "redis"
   ],
   "engines": [
@@ -58,7 +62,7 @@
   "scripts": {
     "commitmsg": "node ./.hooks/commit-msg",
     "prepush": "eslint . && npm test",
-    "test": "DEBUG=bow:* istanbul cover -x \"./test/**/*.js\" node_modules/mocha/bin/_mocha -- --recursive ./test/**/*.js",
+    "test": "DEBUG=bow:* istanbul cover -x \"./test/**/*.js\" node_modules/mocha/bin/_mocha -- --recursive ./test/**/*.test.js",
     "coverage": "cat ./coverage/lcov.info | ./node_modules/.bin/coveralls"
   }
 }
