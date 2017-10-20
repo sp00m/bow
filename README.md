@@ -25,14 +25,14 @@ To ease horizontal scalability, each Bow instance can connect to a [Redis messag
 
 Bow is built upon these four main concepts:
 
-- **messages**, that must hold the *audience* to which they must be dispatched to;
+- **messages**, that must hold the audience to which they must be dispatched to;
 - **middlewares**, that know how to resolve the messages audiences;
 - **inbounds**, which create new HTTP API endpoints;
 - and **outbounds**, which create new WebSocket API endpoints.
 
 ### Message
 
-A Bow *message* is composed by:
+A message is composed by:
 
 - a *name*, that will be used for the WebSocket event name;
 - a *payload*, that will be used for the WebSocket event content;
@@ -42,7 +42,7 @@ An audience is composed by *queries*, themselves composed by *predicates*.
 
 #### Predicate
 
-A *predicate* is a key-value pair, where keys are strings and **values only one of the following JSON literals**:
+A predicate is a key-value pair, where keys are strings and **values only one of the following JSON literals**:
 
 - Boolean (`true` or `false`);
 - Number (e.g. `42` or `3.14159`);
@@ -50,17 +50,17 @@ A *predicate* is a key-value pair, where keys are strings and **values only one 
 
 #### Query
 
-A *query* is a conjunction (logical `AND`) of predicates as a JSON object, for example:
+A query is a conjunction (logical `AND`) of predicates as a JSON object, for example:
 
 ```json
 { "role": "author", "blogId": 42 }
 ```
 
-The above query is composed by to predicates: `"role": "author"` and `"blogId": 42`. Such a query will thus select only authors of the blog 42, i.e. both predicates must be fulfilled.
+The above query is composed by two predicates: `"role": "author"` and `"blogId": 42`. Such a query will thus select only authors of the blog 42, i.e. both predicates must be fulfilled.
 
 #### Audience
 
-An *audience* is a disjunction (logical `OR`) of queries as a JSON array, for example:
+An audience is a disjunction (logical `OR`) of queries as a JSON array, for example:
 
 ```json
 [
@@ -89,7 +89,7 @@ Here is an example of what could be a message:
 
 ### Middleware
 
-The purpose of *middlewares* is to resolve an audience so that holding message can be dispatched to the right tenants.
+The purpose of middlewares is to resolve an audience so that holding message can be dispatched to the right tenants.
 
 A middleware is composed by:
 
@@ -98,7 +98,7 @@ A middleware is composed by:
 
 #### Criterion
 
-Just like predicates, *criteria* are key-value pairs, where keys are strings and **values only one of the following JSON literals**:
+Just like predicates, criteria are key-value pairs, where keys are strings and **values only one of the following JSON literals**:
 
 - Boolean (`true` or `false`);
 - Number (e.g. `42` or `3.14159`);
@@ -121,7 +121,7 @@ The above criteria mean that the listener is an author of the blogs 42 and 418.
 
 #### Resolution
 
-The *resolution* will first try to match the audiences predicates keys with the listeners criteria keys, then the audiences predicates values with the listeners criteria values.
+The message resolver will first try to match the audiences predicates keys with the listeners criteria keys, then the audiences predicates values with the listeners criteria values.
 
 For example, given the following listener criteria:
 
@@ -149,7 +149,7 @@ The message holding this audience will thus be forwarded to the listener.
 
 ### Inbound
 
-Messages are pushed via *inbounds*, which are basically HTTP endpoints built thanks to [Koa](http://koajs.com/). Inbounds are protected by [Basic Auth](https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication#Basic_authentication_scheme), which makes it easily compatible with [Amazon SNS](http://docs.aws.amazon.com/sns/latest/dg/SendMessageToHttp.html) for example (if you plan to use Amazon SNS, [sns-validator](https://www.npmjs.com/package/sns-validator) could be useful).
+Messages are pushed via inbounds, which are basically HTTP endpoints built thanks to [Koa](http://koajs.com/). Inbounds are protected by [Basic Auth](https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication#Basic_authentication_scheme), which makes it easily compatible with [Amazon SNS](http://docs.aws.amazon.com/sns/latest/dg/SendMessageToHttp.html) for example (if you plan to use Amazon SNS, [sns-validator](https://www.npmjs.com/package/sns-validator) could be useful).
 
 An inbound is composed by:
 
@@ -188,7 +188,7 @@ const createMessageFromRequestBody = async (body) => {
 - `404` if the URL is not handled;
 - `405` if the verb is not handled (paths are mapped to `POST`);
 - `401` if no auth is provided or if the provided auth is wrong;
-- `422` if no body is provided in the HTTP request or if the provided body cannot be parsed into a _message_;
+- `422` if no body is provided in the HTTP request or if the provided body cannot be parsed into a message;
 - `204` otherwise.
 
 ### Outbound
@@ -202,6 +202,10 @@ A listener's details should be an object that has at least one `id` property, ho
 
 - Number (e.g. `42` or `3.14159`);
 - String, non-empty (e.g. `"foobar"`).
+
+This `id` must uniquely identify the listening entity. The same `id` can connect multiple times (for example a user connected via their browser and their phone), in which case both listeners will be notified when a message is dispatched.
+
+**Be careful not to make two distinct entities share the same `id`** (for example a *user* and a *live signage*, which may share the same database `id` value as not of the same type). In this case, one solution can be to prefix the `id` by the type (e.g. `USER/{id}` and `SIGNAGE/{id}`).
 
 #### Handshake
 
@@ -274,9 +278,9 @@ Optional, the `options` object to pass to [Node.js `https.createServer(...)` fun
 
 Optional, the Redis config.
 
-If this is an object, then it will be passed to [`new Redis(...)`](https://www.npmjs.com/package/ioredis#connect-to-redis).
+If this is an object, then it will be passed to [ioredis `new Redis(...)`](https://www.npmjs.com/package/ioredis#connect-to-redis).
 
-If this is an array of object, then it will be passed to [`new Redis.Cluster(...)`](https://www.npmjs.com/package/ioredis#cluster).
+If this is an array of object, then it will be passed to [ioredis `new Redis.Cluster(...)`](https://www.npmjs.com/package/ioredis#cluster).
 
 **Any other value will fail** (e.g. only the port).
 
