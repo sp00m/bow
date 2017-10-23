@@ -25,14 +25,14 @@ To ease horizontal scalability, each Bow instance can connect to a [Redis messag
 
 Bow is built upon these four main concepts:
 
-- **messages**, that must hold the *audience* to which they must be dispatched to;
+- **messages**, that must hold the audience to which they must be dispatched to;
 - **middlewares**, that know how to resolve the messages audiences;
 - **inbounds**, which create new HTTP API endpoints;
 - and **outbounds**, which create new WebSocket API endpoints.
 
 ### Message
 
-A Bow *message* is composed by:
+A message is composed by:
 
 - a *name*, that will be used for the WebSocket event name;
 - a *payload*, that will be used for the WebSocket event content;
@@ -42,7 +42,7 @@ An audience is composed by *queries*, themselves composed by *predicates*.
 
 #### Predicate
 
-A *predicate* is a key-value pair, where keys are strings and **values only one of the following JSON literals**:
+A predicate is a key-value pair, where keys are strings and **values only one of the following JSON literals**:
 
 - Boolean (`true` or `false`);
 - Number (e.g. `42` or `3.14159`);
@@ -50,17 +50,17 @@ A *predicate* is a key-value pair, where keys are strings and **values only one 
 
 #### Query
 
-A *query* is a conjunction (logical `AND`) of predicates as a JSON object, for example:
+A query is a conjunction (logical `AND`) of predicates as a JSON object, for example:
 
 ```json
 { "role": "author", "blogId": 42 }
 ```
 
-The above query is composed by to predicates: `"role": "author"` and `"blogId": 42`. Such a query will thus select only authors of the blog 42, i.e. both predicates must be fulfilled.
+The above query is composed by two predicates: `"role": "author"` and `"blogId": 42`. Such a query will thus select only authors of the blog 42, i.e. both predicates must be fulfilled.
 
 #### Audience
 
-An *audience* is a disjunction (logical `OR`) of queries as a JSON array, for example:
+An audience is a disjunction (logical `OR`) of queries as a JSON array, for example:
 
 ```json
 [
@@ -89,7 +89,7 @@ Here is an example of what could be a message:
 
 ### Middleware
 
-The purpose of *middlewares* is to resolve an audience so that holding message can be dispatched to the right tenants.
+The purpose of middlewares is to resolve an audience so that holding message can be dispatched to the right tenants.
 
 A middleware is composed by:
 
@@ -98,7 +98,7 @@ A middleware is composed by:
 
 #### Criterion
 
-Just like predicates, *criteria* are key-value pairs, where keys are strings and **values only one of the following JSON literals**:
+Just like predicates, criteria are key-value pairs, where keys are strings and **values only one of the following JSON literals**:
 
 - Boolean (`true` or `false`);
 - Number (e.g. `42` or `3.14159`);
@@ -121,7 +121,7 @@ The above criteria mean that the listener is an author of the blogs 42 and 418.
 
 #### Resolution
 
-The *resolution* will first try to match the audiences predicates keys with the listeners criteria keys, then the audiences predicates values with the listeners criteria values.
+The message resolver will first try to match the audiences predicates keys with the listeners criteria keys, then the audiences predicates values with the listeners criteria values.
 
 For example, given the following listener criteria:
 
@@ -149,7 +149,7 @@ The message holding this audience will thus be forwarded to the listener.
 
 ### Inbound
 
-Messages are pushed via *inbounds*, which are basically HTTP endpoints built thanks to [Koa](http://koajs.com/). Inbounds are protected by [Basic Auth](https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication#Basic_authentication_scheme), which makes it easily compatible with [Amazon SNS](http://docs.aws.amazon.com/sns/latest/dg/SendMessageToHttp.html) for example (if you plan to use Amazon SNS, [sns-validator](https://www.npmjs.com/package/sns-validator) could be useful).
+Messages are pushed via inbounds, which are basically HTTP endpoints built thanks to [Koa](http://koajs.com/). Inbounds are protected by [Basic Auth](https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication#Basic_authentication_scheme), which makes it easily compatible with [Amazon SNS](http://docs.aws.amazon.com/sns/latest/dg/SendMessageToHttp.html) for example (if you plan to use Amazon SNS, [sns-validator](https://www.npmjs.com/package/sns-validator) could be useful).
 
 An inbound is composed by:
 
@@ -188,7 +188,7 @@ const createMessageFromRequestBody = async (body) => {
 - `404` if the URL is not handled;
 - `405` if the verb is not handled (paths are mapped to `POST`);
 - `401` if no auth is provided or if the provided auth is wrong;
-- `422` if no body is provided in the HTTP request or if the provided body cannot be parsed into a _message_;
+- `422` if no body is provided in the HTTP request or if the provided body cannot be parsed into a message;
 - `204` otherwise.
 
 ### Outbound
@@ -202,6 +202,10 @@ A listener's details should be an object that has at least one `id` property, ho
 
 - Number (e.g. `42` or `3.14159`);
 - String, non-empty (e.g. `"foobar"`).
+
+This `id` must uniquely identify the listening entity. The same `id` can connect multiple times (for example a user connected via their browser and their phone), in which case both listeners will be notified when a message is dispatched.
+
+**Be careful not to make two distinct entities share the same `id`** (for example a *user* and a *live signage*, which may share the same database `id` value as not of the same type). In this case, one solution can be to prefix the `id` by the type (e.g. `USER/{id}` and `SIGNAGE/{id}`).
 
 #### Handshake
 
@@ -274,9 +278,9 @@ Optional, the `options` object to pass to [Node.js `https.createServer(...)` fun
 
 Optional, the Redis config.
 
-If this is an object, then it will be passed to [`new Redis(...)`](https://www.npmjs.com/package/ioredis#connect-to-redis).
+If this is an object, then it will be passed to [ioredis `new Redis(...)`](https://www.npmjs.com/package/ioredis#connect-to-redis).
 
-If this is an array of object, then it will be passed to [`new Redis.Cluster(...)`](https://www.npmjs.com/package/ioredis#cluster).
+If this is an array of object, then it will be passed to [ioredis `new Redis.Cluster(...)`](https://www.npmjs.com/package/ioredis#cluster).
 
 **Any other value will fail** (e.g. only the port).
 
@@ -344,11 +348,15 @@ Registers a new outbound, expects one `config` object argument:
 
 **Required**, the middleware version to use to resolve the listener from the id retrieved thanks to the token.
 
-## Example
+## Examples
 
-Following example uses [JWT](https://jwt.io/) for generating tokens, and a relational database holding the users (i.e. the *listeners*).
+The following examples use [JWT](https://jwt.io/). Note that while JWT fits great here, you can use any other token system of your choice.
 
-### Database
+### Server with simple JWTs and a database access to create the criteria
+
+The following server example uses a relational database holding the users (i.e. the *listeners*) that will be used to create the criteria by your Bow server.
+
+#### Database
 
 Table `listener`:
 
@@ -362,7 +370,7 @@ Table `listener`:
 +----+----------+--------+---------+
 ```
 
-### Server-side
+#### Server
 
 ```js
 const Bow = require("bow");
@@ -447,7 +455,89 @@ bow.start().then(() => {
 });
 ```
 
-### Client-side
+### Server with complex JWTs that hold the criteria directly
+
+```js
+const Bow = require("bow");
+
+/*
+ * middleware configuration:
+ */
+
+const createCriteriaFromListenerDetails = (listenerDetails) =>
+  // criteria already available in the listener details,
+  // prepared by createListenerDetailsFromToken(...) (see below):
+  listenerDetails.criteria;
+
+/*
+ * inbound configuration:
+ */
+
+const createMessageFromRequestBody = (body) => ({
+  name: body.name,
+  payload: body,
+  audience: body.audience
+});
+
+/*
+ * outbound configuration:
+ */
+
+// shared with auth server that created the token:
+const PRIVATE_KEY = "thisisatopsecretkey";
+
+const createListenerDetailsFromToken = (token) => {
+  const payload = jwt.decrypt(token, PRIVATE_KEY);
+  return {
+    id: payload.listenerId,
+    // generated by the auth server,
+    // say based on the same database as in the previous example:
+    criteria: payload.criteria
+  };
+};
+
+/*
+ * create server:
+ */
+
+ const config = {
+   port: 443,
+   https: { ... },
+   redis: { ... },
+   inbound: {
+     realm: "My blogging platform",
+     username: "messagepusher",
+     password: "thisisasecret"
+   },
+   outbound: {
+     timeout: 5 // seconds
+   }
+ };
+
+const bow = new Bow(config)
+  .middleware({
+    version: "v1.1",
+    createCriteriaFromListenerDetails
+  })
+  .inbound({
+    path: "/v1.2/messages",
+    createMessageFromRequestBody,
+    middlewareVersion: "v1.1"
+  })
+  .outbound({
+    version: "v1.3",
+    createListenerDetailsFromToken,
+    middlewareVersion: "v1.1"
+  });
+
+bow.start().then(() => {
+  console.log("Ready!");
+});
+```
+
+### Client
+
+The following client applies to both servers above.
 
 ```js
 const io = require("socket.io-client");
@@ -472,6 +562,8 @@ const socket = io(url, { query: { v: "v1.3" } })
 ```
 
 ### Push new message
+
+The following push applies to both servers above.
 
 ```text
 POST /v1.2/messages
