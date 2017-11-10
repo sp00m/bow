@@ -44,7 +44,8 @@
     "koa-bodyparser": "^4.2.0",
     "koa-router": "^7.2.1",
     "socket.io": "^2.0.3",
-    "uuid": "^3.1.0"
+    "uuid": "^3.1.0",
+    "snyk": "^1.49.1"
   },
   "devDependencies": {
     "babel-eslint": "^7.2.3",
@@ -63,6 +64,9 @@
     "commitmsg": "node ./.hooks/commit-msg",
     "prepush": "eslint . && npm test",
     "test": "DEBUG=bow:* istanbul cover -x \"./test/**/*.js\" node_modules/mocha/bin/_mocha -- --recursive ./test/**/*.test.js",
-    "coverage": "cat ./coverage/lcov.info | ./node_modules/.bin/coveralls"
-  }
+    "coverage": "cat ./coverage/lcov.info | ./node_modules/.bin/coveralls",
+    "snyk-protect": "snyk protect",
+    "prepare": "npm run snyk-protect"
+  },
+  "snyk": true
 }
