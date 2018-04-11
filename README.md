@@ -84,6 +84,22 @@ Here is an example of what could be a message:
 }
 ```
 
+#### `__disconnect`
+
+If you push a message named `__disconnect`, then instead of dispatching the message to the matched tenants, **their socket will be disconnected**, for example:
+
+```json
+{
+  "name": "__disconnect",
+  "audience": [
+    { "role": "admin" },
+    { "role": "author", "blogId": 42 }
+  ]
+}
+```
+
+The above message will disconnect all the sockets of either admins, or authors of the blog 42.
+
 ### Middleware
 
 The purpose of middlewares is to resolve an audience so that holding message can be dispatched to the right tenants.

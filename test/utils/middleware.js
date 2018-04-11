@@ -6,6 +6,7 @@ const request = require("supertest");
 const Bow = require("../../");
 
 const tokens = {
+  disconnect: "disconnect",
   firstAdmin: "firstAdmin",
   secondAdmin: "secondAdmin",
   firstAuthor: "firstAuthor",
@@ -15,6 +16,7 @@ const tokens = {
 };
 
 const ids = {
+  disconnect: 0,
   firstAdmin: 1,
   secondAdmin: 2,
   firstAuthor: 3,
@@ -24,6 +26,7 @@ const ids = {
 };
 
 const listenerIdsByToken = {
+  [tokens.disconnect]: ids.disconnect,
   [tokens.firstAdmin]: ids.firstAdmin,
   [tokens.secondAdmin]: ids.secondAdmin,
   [tokens.firstAuthor]: ids.firstAuthor,
@@ -33,6 +36,7 @@ const listenerIdsByToken = {
 };
 
 const criteriaByListenersId = {
+  [ids.disconnect]: { id: ids.disconnect },
   [ids.firstAdmin]: { role: "admin" },
   [ids.secondAdmin]: { role: ["admin", "admin"] },
   [ids.firstAuthor]: { role: "author", blogId: 1 },
@@ -111,6 +115,13 @@ const messages = {
       { role: "admin" },
       { role: "author", blogId: 1 }
     ]
+  },
+
+  disconnect: {
+    name: "__disconnect",
+    audience: [
+      { id: ids.disconnect }
+    ]
   }
 
 };
@@ -165,6 +176,7 @@ module.exports = {
   config,
   buildServer,
   messages,
+  createSocket,
   createSocketExpectingMessage,
   createSocketNotExpectingMessage,
   pushMessage
