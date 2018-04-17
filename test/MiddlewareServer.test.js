@@ -100,4 +100,25 @@ describe("MiddlewareServer", () => {
     pushMessage("http", serverPort, "/messages", messages.disconnect);
   })));
 
+  it("should fail if id is invalid", () => new Promise((connectionFailed, connectionSucceeded) => {
+    sockets.push(createSocket(
+      "http", serverPort, 1, tokens.invalidId,
+      connectionFailed, connectionSucceeded
+    ));
+  }));
+
+  it("should fail if criteria is invalid", () => new Promise((connectionFailed, connectionSucceeded) => {
+    sockets.push(createSocket(
+      "http", serverPort, 1, tokens.invalidCriteria,
+      connectionFailed, connectionSucceeded
+    ));
+  }));
+
+  it("should fail if criteria hold __id", () => new Promise((connectionFailed, connectionSucceeded) => {
+    sockets.push(createSocket(
+      "http", serverPort, 1, tokens.criteriaHoldingId,
+      connectionFailed, connectionSucceeded
+    ));
+  }));
+
 });
