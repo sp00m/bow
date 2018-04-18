@@ -335,7 +335,7 @@ Registers a new inbound, expects one `config` object argument:
 
 #### config.path
 
-**Required**, the path of this inbound, must be unique between all inbounds. This path will then be passed to Koa router, **mapped to the HTTP method `POST`**. **The path cannot be `/health`**, as it is reserved for health check (returns an empty `200` response).
+**Required**, the path of this inbound, must be unique between all inbounds. This path will then be passed to Koa router, **mapped to the HTTP method `POST`**. **The path cannot be `/health`**, as it is reserved for the health check.
 
 #### config.createMessageFromRequestBody
 
@@ -364,6 +364,10 @@ Registers a new outbound, expects one `config` object argument:
 #### config.middlewareVersion
 
 **Required**, the middleware version to use to resolve the listener from the id retrieved thanks to the token.
+
+### bow.healthCheck(healthCheckDecorator)
+
+By default, `GET /health` will simply return an empty 200, but this allows you to improve this response. The given `healthCheckDecorator` must be a function that takes a [Koa `context`](https://github.com/koajs/koa/blob/master/docs/api/context.md).
 
 ## Examples
 
