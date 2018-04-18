@@ -261,7 +261,7 @@ Any of the above events **will disconnect the client**.
 
 ### Installation
 
-Bow requires **Node.js v7.6.0 or higher** for ES2015 and async function support.
+Bow requires **Node.js v8.3.0 or higher** for ES2015 and async function support, plus spreading objects.
 
 ```text
 npm install --save bow
