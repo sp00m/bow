@@ -37,6 +37,9 @@ describe("InboundServer", () => {
         createListenerDetailsFromToken: () => {}, // eslint-disable-line no-empty-function
         middlewareVersion: "v1"
       })
+      .healthCheck((context) => {
+        context.body = { foo: "bar" };
+      })
       .start();
   });
 
@@ -87,6 +90,6 @@ describe("InboundServer", () => {
 
   it("should provide a health check", () => request(`http://localhost:${config.port}`)
     .get("/health")
-    .expect(200)); // eslint-disable-line no-magic-numbers
+    .expect(200, { foo: "bar" })); // eslint-disable-line no-magic-numbers
 
 });
