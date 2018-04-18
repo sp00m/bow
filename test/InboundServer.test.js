@@ -73,10 +73,16 @@ describe("InboundServer", () => {
       .post("/v1/messages")
       .expect(422)); // eslint-disable-line no-magic-numbers
 
-  it("should fail if body is wrong", () =>
+  it("should fail if name is wrong", () =>
     request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${config.port}`)
       .post("/v1/messages")
-      .send({ foo: "bar" })
+      .send({ name: "", audience: [{ foo: "bar" }] })
+      .expect(422)); // eslint-disable-line no-magic-numbers
+
+  it("should fail if audience is wrong", () =>
+    request(`http://${config.inbound.username}:${config.inbound.password}@localhost:${config.port}`)
+      .post("/v1/messages")
+      .send({ name: "foobar", audience: "foobar" })
       .expect(422)); // eslint-disable-line no-magic-numbers
 
   it("should provide a health check", () => request(`http://localhost:${config.port}`)

@@ -6,39 +6,55 @@ const request = require("supertest");
 const Bow = require("../../");
 
 const tokens = {
+  disconnect: "disconnect",
   firstAdmin: "firstAdmin",
   secondAdmin: "secondAdmin",
   firstAuthor: "firstAuthor",
   secondAuthor: "secondAuthor",
   thirdAuthor: "thirdAuthor",
-  fourthAuthor: "fourthAuthor"
+  fourthAuthor: "fourthAuthor",
+  invalidCriteria: "invalidCriteria",
+  criteriaHoldingId: "criteriaHoldingId",
+  invalidId: "invalidId"
 };
 
 const ids = {
+  disconnect: 0,
   firstAdmin: 1,
   secondAdmin: 2,
   firstAuthor: 3,
   secondAuthor: 4,
   thirdAuthor: 5,
-  fourthAuthor: 6
+  fourthAuthor: 6,
+  invalidCriteria: 7,
+  criteriaHoldingId: 8,
+  invalidId: true
 };
 
 const listenerIdsByToken = {
+  [tokens.disconnect]: ids.disconnect,
   [tokens.firstAdmin]: ids.firstAdmin,
   [tokens.secondAdmin]: ids.secondAdmin,
   [tokens.firstAuthor]: ids.firstAuthor,
   [tokens.secondAuthor]: ids.secondAuthor,
   [tokens.thirdAuthor]: ids.thirdAuthor,
-  [tokens.fourthAuthor]: ids.fourthAuthor
+  [tokens.fourthAuthor]: ids.fourthAuthor,
+  [tokens.invalidCriteria]: ids.invalidCriteria,
+  [tokens.criteriaHoldingId]: ids.criteriaHoldingId,
+  [tokens.invalidId]: ids.invalidId
 };
 
 const criteriaByListenersId = {
+  [ids.disconnect]: {},
   [ids.firstAdmin]: { role: "admin" },
   [ids.secondAdmin]: { role: ["admin", "admin"] },
   [ids.firstAuthor]: { role: "author", blogId: 1 },
   [ids.secondAuthor]: { role: "author", blogId: 2 },
   [ids.thirdAuthor]: { role: "author", blogId: [1, 2] },
-  [ids.fourthAuthor]: { role: "author", blogId: [0, 2] }
+  [ids.fourthAuthor]: { role: "author", blogId: [0, 2] },
+  [ids.invalidCriteria]: [],
+  [ids.criteriaHoldingId]: { __id: 42 },
+  [ids.invalidId]: { foo: "bar" }
 };
 
 const config = {
@@ -111,6 +127,13 @@ const messages = {
       { role: "admin" },
       { role: "author", blogId: 1 }
     ]
+  },
+
+  disconnect: {
+    name: "__disconnect",
+    audience: [
+      { __id: ids.disconnect }
+    ]
   }
 
 };
@@ -165,6 +188,7 @@ module.exports = {
   config,
   buildServer,
   messages,
+  createSocket,
   createSocketExpectingMessage,
   createSocketNotExpectingMessage,
   pushMessage

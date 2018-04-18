@@ -2,17 +2,14 @@
 
 Bow helps you building a multitenant WebSocket server that fits into a microservice architecture.
 
-## State
+## State (`develop` branch)
 
-`master`: [![Build](https://api.travis-ci.org/bowjs/bow.svg?branch=master)](https://travis-ci.org/bowjs/bow)
-[![Coverage](https://coveralls.io/repos/github/bowjs/bow/badge.svg?branch=master)](https://coveralls.io/github/bowjs/bow?branch=master)
-
-`develop`: [![Build](https://api.travis-ci.org/bowjs/bow.svg?branch=develop)](https://travis-ci.org/bowjs/bow)
-[![Coverage](https://coveralls.io/repos/github/bowjs/bow/badge.svg?branch=develop)](https://coveralls.io/github/bowjs/bow?branch=develop)
-
-[![Dependencies](https://david-dm.org/bowjs/bow/status.svg)](https://david-dm.org/bowjs/bow)
-[![Vulnerabilities](https://snyk.io/test/github/bowjs/bow/badge.svg)](https://snyk.io/test/github/bowjs/bow)
-[![License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](https://opensource.org/licenses/MIT)
+[![Build](https://api.travis-ci.org/bowjs/bow.svg?branch=develop)](https://travis-ci.org/bowjs/bow)  
+[![Coverage](https://coveralls.io/repos/github/bowjs/bow/badge.svg?branch=develop)](https://coveralls.io/github/bowjs/bow?branch=develop)  
+[![Maintainability](https://img.shields.io/codeclimate/maintainability/bowjs/bow.svg?style=flat)](https://codeclimate.com/github/bowjs/bow/maintainability)  
+[![Dependencies](https://david-dm.org/bowjs/bow/status.svg)](https://david-dm.org/bowjs/bow)  
+[![Vulnerabilities](https://snyk.io/test/github/bowjs/bow/badge.svg)](https://snyk.io/test/github/bowjs/bow)  
+[![License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](https://opensource.org/licenses/MIT)  
 
 ## Specs
 
@@ -87,6 +84,22 @@ Here is an example of what could be a message:
 }
 ```
 
+#### `__disconnect`
+
+If you push a message named `__disconnect`, then instead of dispatching the message to the matched tenants, **their socket will be disconnected**, for example:
+
+```json
+{
+  "name": "__disconnect",
+  "audience": [
+    { "role": "admin" },
+    { "role": "author", "blogId": 42 }
+  ]
+}
+```
+
+The above message will disconnect all the sockets of either admins, or authors of the blog 42.
+
 ### Middleware
 
 The purpose of middlewares is to resolve an audience so that holding message can be dispatched to the right tenants.
@@ -118,6 +131,10 @@ For example:
 ```
 
 The above criteria mean that the listener is an author of the blogs 42 and 418.
+
+#### `__id`
+
+Criteria will automatically hold the listener's id in a property named `__id`. This allows messages audiences to target specific listeners.
 
 #### Resolution
 
@@ -248,7 +265,7 @@ Any of the above events **will disconnect the client**.
 
 ### Installation
 
-Bow requires **Node.js v7.6.0 or higher** for ES2015 and async function support.
+Bow requires **Node.js v8.3.0 or higher** for ES2015 and async function support, plus spreading objects.
 
 ```text
 npm install --save bow

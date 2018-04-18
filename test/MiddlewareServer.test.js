@@ -4,6 +4,7 @@ const {
   tokens,
   buildServer,
   messages,
+  createSocket,
   createSocketExpectingMessage,
   createSocketNotExpectingMessage,
   pushMessage
@@ -84,5 +85,40 @@ describe("MiddlewareServer", () => {
   })).then((messagePromiseGetter) =>
     pushMessage("http", serverPort, "/messages", messages.simple, messagePromiseGetter)
   ));
+
+  it("should allow disconnecting clients", () => new Promise((connectionSucceeded, connectionFailed) => {
+    sockets.push(createSocket(
+      "http", serverPort, 1, tokens.disconnect,
+      connectionFailed, connectionSucceeded
+    ));
+  }).then((socket) => new Promise((disconnectionSucceeded, disconnectionFailed) => {
+    const timeout = setTimeout(disconnectionFailed, 1000); // eslint-disable-line no-magic-numbers
+    socket.on("disconnect", () => {
+      clearTimeout(timeout);
+      disconnectionSucceeded();
+    });
+    pushMessage("http", serverPort, "/messages", messages.disconnect);
+  })));
+
+  it("should fail if id is invalid", () => new Promise((connectionFailed, connectionSucceeded) => {
+    sockets.push(createSocket(
+      "http", serverPort, 1, tokens.invalidId,
+      connectionFailed, connectionSucceeded
+    ));
+  }));
+
+  it("should fail if criteria is invalid", () => new Promise((connectionFailed, connectionSucceeded) => {
+    sockets.push(createSocket(
+      "http", serverPort, 1, tokens.invalidCriteria,
+      connectionFailed, connectionSucceeded
+    ));
+  }));
+
+  it("should fail if criteria hold __id", () => new Promise((connectionFailed, connectionSucceeded) => {
+    sockets.push(createSocket(
+      "http", serverPort, 1, tokens.criteriaHoldingId,
+      connectionFailed, connectionSucceeded
+    ));
+  }));
 
 });
