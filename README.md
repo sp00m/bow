@@ -132,6 +132,10 @@ For example:
 
 The above criteria mean that the listener is an author of the blogs 42 and 418.
 
+#### `__id`
+
+Criteria will automatically hold the listener's id in a property named `__id`. This allows messages audiences to target specific listeners.
+
 #### Resolution
 
 The message resolver will first try to match the audiences predicates keys with the listeners criteria keys, then the audiences predicates values with the listeners criteria values.
