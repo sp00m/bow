@@ -1,5 +1,7 @@
 # Bow - Broadcast Over WebSocket
 
+[![NPM](https://nodei.co/npm/bow.png?compact=true)](https://nodei.co/npm/bow/)
+
 Bow helps you building a multitenant WebSocket server that fits into a microservice architecture.
 
 ## State (`develop` branch)
