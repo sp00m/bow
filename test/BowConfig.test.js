@@ -37,11 +37,30 @@ describe("Bow config", () => {
       redis: ["foobar"]
     }));
 
+  it("should fail if config.middleware is not an object", () =>
+    checkConfig("config.middleware", "an object", {
+      port: 1,
+      https: {},
+      redis: [],
+      middleware: "foobar"
+    }));
+
+  it("should fail if config.middleware.logInterval is not an integer", () =>
+    checkConfig("config.middleware.logInterval", "an integer", {
+      port: 1,
+      https: {},
+      redis: [],
+      middleware: {
+        logInterval: "foobar"
+      }
+    }));
+
   it("should fail if config.inbound is not an object", () =>
     checkConfig("config.inbound", "an object", {
       port: 1,
       https: {},
       redis: [],
+      middleware: {},
       inbound: "foobar"
     }));
 
