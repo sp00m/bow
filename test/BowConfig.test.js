@@ -60,6 +60,7 @@ describe("Bow config", () => {
       port: 1,
       https: {},
       redis: [],
+      middleware: {},
       inbound: "foobar"
     }));
 
