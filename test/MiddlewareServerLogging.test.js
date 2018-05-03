@@ -8,7 +8,7 @@ const {
   pushMessage
 } = require("./utils/middleware");
 
-describe("MiddlewareServer", () => {
+describe("MiddlewareServer logging", () => {
 
   const serverPort = 3000;
 
