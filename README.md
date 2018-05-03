@@ -261,6 +261,8 @@ const socket = io(url, { query: { v: version } })
 
 Any of the above events **will disconnect the client**.
 
+See also the [Socket.IO Client API Documentation](https://socket.io/docs/client-api/).
+
 ## Usage
 
 ### Installation
@@ -275,7 +277,7 @@ npm install --save bow
 
 If used in production environment, it is recommended to set the `NODE_ENV` environment variable to `production`.
 
-Because Bow uses [debug](https://www.npmjs.com/package/debug), you should set [the `DEBUG` environment variable](https://www.npmjs.com/package/debug#environment-variables) to `bow:*` (only useful messages will be logged).
+Because Bow uses [debug](https://www.npmjs.com/package/debug), you should set [the `DEBUG` environment variable](https://www.npmjs.com/package/debug#environment-variables) to `bow:*`.
 
 These variables can be easily set thanks to [cross-env](https://www.npmjs.com/package/cross-env).
 
@@ -300,6 +302,10 @@ If this is an object, then it will be passed to [ioredis `new Redis(...)`](https
 If this is an array of object, then it will be passed to [ioredis `new Redis.Cluster(...)`](https://www.npmjs.com/package/ioredis#cluster).
 
 **Any other value will fail** (e.g. only the port).
+
+#### config.middleware.logInterval
+
+Optional, the interval in seconds that should be used to log the number of currently connected WebSocket clients. If negative or null, nothing will be logged.
 
 #### config.inbound.realm
 

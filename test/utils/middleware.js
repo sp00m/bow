@@ -73,6 +73,7 @@ const buildServer = (port, options = {}) => {
   serverConfig.port = port;
   serverConfig.https = options.https;
   serverConfig.redis = options.redis;
+  serverConfig.middleware = options.middleware;
   return new Bow(serverConfig)
     .middleware({
       version: "v1",
