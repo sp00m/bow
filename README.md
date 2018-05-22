@@ -63,8 +63,8 @@ An audience is a disjunction (logical `OR`) of queries as a JSON array, for exam
 
 ```json
 [
-  { "role": "admin" }
-  { "role": "author", "blogId": 42 },
+  { "role": "admin" },
+  { "role": "author", "blogId": 42 }
 ]
 ```
 
@@ -155,8 +155,8 @@ And the following audience:
 
 ```json
 [
-  { "role": "admin" }
-  { "role": "author", "blogId": 42 },
+  { "role": "admin" },
+  { "role": "author", "blogId": 42 }
 ]
 ```
 
@@ -279,7 +279,7 @@ npm install --save bow
 
 If used in production environment, it is recommended to set the `NODE_ENV` environment variable to `production`.
 
-Because Bow uses [debug](https://www.npmjs.com/package/debug), you should set [the `DEBUG` environment variable](https://www.npmjs.com/package/debug#environment-variables) to `bow:*`.
+Because Bow uses [debug](https://www.npmjs.com/package/debug), you should set [the `DEBUG` environment variable](https://www.npmjs.com/package/debug#environment-variables) to `bow:*`. You can have more verbose logs by adding `dbow:*` as well (mostly for debugging purposes), i.e. `bow:*,dbow.*`.
 
 These variables can be easily set thanks to [cross-env](https://www.npmjs.com/package/cross-env).
 
