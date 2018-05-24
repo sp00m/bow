@@ -58,19 +58,6 @@ describe("OutboundServer", () => {
     }
   });
 
-  it("should fail when specifying a namespace", () => new Promise((resolve, reject) => {
-    socket = io(`http://localhost:${config.port}/foo/bar`, { forceNew: true })
-      .on("connect", () => reject("Connection should have been impossible"))
-      .on("alert", (alert) => reject(`Unexpected alert: ${alert}`))
-      .on("error", (error) => {
-        if ("Invalid namespace" === error) {
-          resolve();
-        } else {
-          reject(`Unexpected error: ${error}`);
-        }
-      });
-  }));
-
   it("should fail when specifying no version", () => new Promise((resolve, reject) => {
     socket = io(`http://localhost:${config.port}`, { forceNew: true })
       .on("connect", () => reject("Connection should have been impossible"))
@@ -90,6 +77,19 @@ describe("OutboundServer", () => {
       .on("alert", (alert) => reject(`Unexpected alert: ${alert}`))
       .on("error", (error) => {
         if ("Version '42' not supported" === error) {
+          resolve();
+        } else {
+          reject(`Unexpected error: ${error}`);
+        }
+      });
+  }));
+
+  it("should fail when specifying a namespace", () => new Promise((resolve, reject) => {
+    socket = io(`http://localhost:${config.port}/foo/bar`, { forceNew: true, query: { v: 1 } })
+      .on("connect", () => reject("Connection should have been impossible"))
+      .on("alert", (alert) => reject(`Unexpected alert: ${alert}`))
+      .on("error", (error) => {
+        if ("Invalid namespace" === error) {
           resolve();
         } else {
           reject(`Unexpected error: ${error}`);
