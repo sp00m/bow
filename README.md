@@ -265,11 +265,21 @@ Any of the above events **will disconnect the client**.
 
 See also the [Socket.IO Client API Documentation](https://socket.io/docs/client-api/).
 
+## Architecture
+
+### Handshake
+
+![Handshake](docs/handshake.png?raw=true "Handshake")
+
+### Push
+
+![Push](docs/push.png?raw=true "Push")
+
 ## Usage
 
 ### Installation
 
-Bow requires **Node.js v8.3.0 or higher** for ES2015 and async function support, plus spreading objects.
+Bow requires **Node.js v8.3.0 or higher** for ES2015 and async function support, plus the spreading syntax.
 
 ```text
 npm install --save bow
