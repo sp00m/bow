@@ -271,9 +271,79 @@ See also the [Socket.IO Client API Documentation](https://socket.io/docs/client-
 
 ![Handshake](docs/handshake.png?raw=true "Handshake")
 
+1. The client used by "user #1" establishes the WebSocket connection. The load balancer attaches it to "Bow instance #1".
+
+2. The client asks "your app" a token, so that it can authenticate to the WebSocket server.
+
+3. "Your app" generates a token and returns it. If using a JWT token, the claims could look like:
+
+```js
+{
+  "id": "USER/1",
+  "criteria": {
+    "role": "author",
+    "blogId": 42
+  }
+}
+```
+
+4. The client sends the token it received to the instance it is connected to, via the established WebSocket connection. The instance validates the token, stores the WebSocket connection object in its memory, and call the client-provided acknowledgement function. In memory, the listener will be scattered this way:
+
+```js
+Map {
+  // ...,
+  "__id": Map {
+    // ...,
+    "USER/1": Set [ ..., webSocketConnection, ... ],
+    // ...,
+  },
+  "role": Map {
+    // ...,
+    "author": Set [ ..., webSocketConnection, ... ],
+    // ...,
+  },
+  "blogId": Map {
+    // ...,
+    42: Set [ ..., webSocketConnection ... ],
+    // ...,
+  }
+  // ...
+}
+```
+
+5. The instance tells Redis that it just got a new listener registered, while attaching the corresponding criteria.
+
+6. Redis broadcasts this message to all instances, so that they can update their current version of this user's criteria, if any (a same user can be connected with both their laptop and their smartphone to different instances for example).
+
 ### Push
 
 ![Push](docs/push.png?raw=true "Push")
+
+0. The clients used by "user #1" and "user #2" both have an authenticated WebSocket connection.
+
+1. "User #2" creates a new article by calling "your app"'s API.
+
+2. "Your app" pushes "NEW_ARTICLE" to the WebSocket server. The load balancer forwards it to "Bow instance #3". The message looks like:
+
+```js
+{
+  "name": "NEW_ARTICLE",
+  "article": {
+    "title": "New article title",
+    "content": "New article content"
+  },
+  "audience": [
+    { "role": "admin" },
+    { "role": "author", "blogId": 42 }
+  ]
+}
+```
+
+3. The instance tells Redis that it just got a new message to forward while attaching it. At this point, the instance does nothing more.
+
+4. Redis broadcasts this message to all instances, including "Bow instance #3" that triggered this message's process, so that they can all forward it to the targeted listeners, by resolving the audience attached to the message against the listeners they currently hold in memory.
+
+5. Both "Bow instance #1" and "Bow instance #3" found listeners they must push the message to, respectively "user #1" and "user #2". These two clients then receive the message over the established WebSocket connection.
 
 ## Usage
 
@@ -345,7 +415,7 @@ Registers a new middleware, expects one `config` object argument:
 
 #### config.createCriteriaFromListenerDetails
 
-**Required**, a function that takes one single `listenerId` argument, and returns the corresponding listener criteria, possibly via a promise.
+**Required**, a function that takes listener's details, and returns the corresponding listener criteria, possibly via a promise.
 
 ### bow.inbound(config)
 
