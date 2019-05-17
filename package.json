@@ -12,11 +12,9 @@
     "scalable",
     "redis"
   ],
-  "engines": [
-    {
-      "node": ">=8.3.0"
-    }
-  ],
+  "engines": {
+    "node": ">=8.3.0"
+  },
   "main": "index.js",
   "files": [
     "lib/"
@@ -32,32 +30,32 @@
     "url": "https://github.com/bowjs/bow/issues"
   },
   "dependencies": {
-    "basic-auth": "2.0.0",
-    "check-types": "7.4.0",
-    "clone": "2.1.1",
-    "debug": "3.1.0",
+    "basic-auth": "2.0.1",
+    "check-types": "8.0.2",
+    "clone": "2.1.2",
+    "debug": "4.1.0",
     "deep-equal": "1.0.1",
     "deep-freeze": "0.0.1",
-    "ioredis": "3.2.2",
-    "killable": "1.0.0",
-    "koa": "2.5.2",
+    "ioredis": "4.9.3",
+    "killable": "1.0.1",
+    "koa": "2.7.0",
     "koa-bodyparser": "4.2.1",
     "koa-router": "7.4.0",
-    "socket.io": "2.1.1",
+    "socket.io": "2.2.0",
     "uuid": "3.3.2"
   },
   "devDependencies": {
-    "babel-eslint": "8.2.6",
-    "coveralls": "3.0.2",
-    "eslint": "5.2.0",
+    "babel-eslint": "10.0.1",
+    "coveralls": "3.0.3",
+    "eslint": "5.16.0",
     "eslint-plugin-no-null": "1.0.2",
     "https-pem": "2.0.0",
-    "husky": "0.14.3",
+    "husky": "2.3.0",
     "istanbul": "1.1.0-alpha.1",
-    "mocha": "5.2.0",
-    "should": "13.2.1",
-    "socket.io-client": "2.1.1",
-    "supertest": "3.1.0"
+    "mocha": "6.1.4",
+    "should": "13.2.3",
+    "socket.io-client": "2.2.0",
+    "supertest": "4.0.2"
   },
   "scripts": {
     "commitmsg": "node ./.hooks/commit-msg",
