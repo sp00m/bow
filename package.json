@@ -58,9 +58,13 @@
     "supertest": "4.0.2"
   },
   "scripts": {
-    "commitmsg": "node ./.hooks/commit-msg",
-    "prepush": "eslint . && npm test",
     "test": "DEBUG=bow:*,dbow:* istanbul cover -x \"./test/**/*.js\" node_modules/mocha/bin/_mocha -- --exit --recursive ./test/**/*.test.js",
     "coverage": "cat ./coverage/lcov.info | ./node_modules/.bin/coveralls"
+  },
+  "husky": {
+    "hooks": {
+      "commit-msg": "node ./.hooks/commit-msg",
+      "pre-push": "eslint . && npm test"
+    }
   }
 }
