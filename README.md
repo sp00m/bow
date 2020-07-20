@@ -1,3 +1,5 @@
+# **NOT MAINTAINED :crying_cat_face:**
+
 # Bow - Broadcast Over WebSocket
 
 [![NPM](https://nodei.co/npm/bow.png?compact=true)](https://nodei.co/npm/bow/)
